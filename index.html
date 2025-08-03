@@ -1,12 +1,102 @@
+
 <!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="UTF-8">
-  <title>Website của Thanh Bình</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./style.css" />
+    <body>
   <h1>Chào mừng bạn đến với trang của Thanh Bình!</h1>
   <p>Trang web đang được xây dựng...</p>
 </body>
+  </head>
+  <div class="main">
+    <form action="" method="POST" class="form" id="form-1">
+      <h3 class="heading">Thành viên đăng ký</h3>
+      <p class="desc">Cùng nhau làm app lỏ ❤️‍🔥😅🤣❤️</p>
+
+      <div class="spacer"></div>
+
+      <div class="form-group">
+        <label for="fullname" class="form-label">Tên đầy đủ của bạn </label>
+        <input
+          id="fullname"
+          name="fullname"
+          type="text"
+          placeholder="VD: Bình master"
+          class="form-control"
+        />
+        <span class="form-message"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="email" class="form-label">Email</label>
+        <input
+          id="email"
+          name="email"
+          type="text"
+          placeholder="VD: MasterHeino@gmail.com"
+          class="form-control"
+        />
+        <span class="form-message"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">Mật khẩu</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          placeholder="Nhập mật khẩu VD:Binh12"
+          class="form-control"
+        />
+        <span class="form-message"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="password_confirmation" class="form-label"
+          >Nhập lại mật khẩu</label
+        >
+        <input
+          id="password_confirmation"
+          name="password_confirmation"
+          placeholder="Nhập lại mật khẩu"
+          type="password"
+          class="form-control"
+        />
+        <span class="form-message"></span>
+      </div>
+
+      <button class="form-submit">Đăng ký</button>
+    </form>
+  </div>
+  <script src="./validator.js"></script>
+  <script>
+    Validator({
+      form: "#form-1",
+      errorSelector: ".form-message",
+      rules: [
+        Validator.isRequired("#fullname", "Vui lòng nhập họ tên"),
+        Validator.isEmail("#email"),
+        Validator.isRequired("#password"),
+        Validator.isPassword("#password", 6),
+        Validator.isRequired("#password_confirmation"),
+        Validator.isConfirmed(
+          "#password_confirmation",
+          function () {
+            return document.querySelector("#form-1 #password").value;
+          },
+          "Mật khẩu xác nhận không khớp"
+        ),
+      ],
+    });
+  </script>
+  <body></body>
+</html>
+
 </html>
