@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Hồ Sơ Cá Nhân - Thanh Lý Đồ Cũ</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="Chỉnh sửa hồ sơ cá nhân, avatar" name="keywords" />
+    <meta
+      content="Cập nhật thông tin cá nhân và avatar trên website"
+      name="description"
+    />
+    <link href="img/favicon.ico" rel="icon" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link href="lib/animate/animate.min.css" rel="stylesheet" />
+    <link href="lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet" />
+    <link href="css/style.css" rel="stylesheet" />
+    <style>
+      .avatar-upload {
+        position: relative;
+        display: inline-block;
+      }
+      .avatar-upload img.profile-avatar {
+        width: 140px;
+        height: 140px;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 3px solid #ffd333;
+      }
+      .avatar-upload-btn {
+        position: absolute;
+        bottom: 6px;
+        right: 6px;
+        background: #ffd333;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .avatar-upload-btn:hover {
+        background: #e9c10d;
+      }
+      #avatarInput {
+        display: none;
+      }
+      .avatar-loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 28px;
+        border-radius: 50%;
+        opacity: 0;
+        transition: 0.25s;
+      }
+      .avatar-upload.loading .avatar-loading-overlay {
+        opacity: 1;
+      }
+      .stats-card {
+        background: linear-gradient(45deg, #ffd333, #f39c12);
+        border-radius: 10px;
+        color: #fff;
+        text-align: center;
+        padding: 18px 12px;
+      }
+      .stats-number {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Shared Header Placeholder -->
+    <div id="app-header"></div>
+
+    <!-- Breadcrumb -->
+    <div class="container-fluid">
+      <div class="row px-xl-5">
+        <div class="col-12">
+          <nav class="breadcrumb bg-light mb-30">
+            <a class="breadcrumb-item text-dark" href="index.html">Trang Chủ</a>
+            <span class="breadcrumb-item active">Hồ Sơ Cá Nhân</span>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile Content -->
+    <div class="container-fluid">
+      <div class="row px-xl-5">
+        <!-- Left Column -->
+        <div class="col-lg-4">
+          <div class="bg-light p-30 mb-30">
+            <div class="text-center mb-4">
+              <div class="avatar-upload">
+                <img
+                  id="profileAvatar"
+                  src="img/user.jpg"
+                  alt="Avatar"
+                  class="profile-avatar"
+                />
+                <div class="avatar-loading-overlay" id="avatarLoading">⟳</div>
+                <button
+                  type="button"
+                  class="avatar-upload-btn"
+                  onclick="document.getElementById('avatarInput').click()"
+                >
+                  <i class="fas fa-camera text-dark"></i>
+                </button>
+                <input
+                  type="file"
+                  id="avatarInput"
+                  accept="image/*"
+                  onchange="previewAvatar(event)"
+                />
+              </div>
+              <h4 class="mt-3 mb-1" id="profileName">Đang tải...</h4>
+              <p class="text-muted" id="profileEmail">email@example.com</p>
+              <div class="d-flex justify-content-center">
+                <span class="badge badge-primary px-3 py-2"
+                  ><i class="fas fa-star mr-1"></i
+                  ><span id="profileRating">0</span> điểm uy tín</span
+                >
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-6">
+                <div class="stats-card mb-3">
+                  <div class="stats-number" id="totalPosts">0</div>
+                  <div>Bài đăng</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="stats-card mb-3">
+                  <div class="stats-number" id="totalReviews">0</div>
+                  <div>Đánh giá</div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-4">
+              <a href="create-post.html" class="btn btn-primary btn-block mb-2"
+                ><i class="fas fa-plus mr-2"></i>Đăng Bài Mới</a
+              >
+              <a
+                href="my-posts.html"
+                class="btn btn-outline-primary btn-block mb-2"
+                ><i class="fas fa-list mr-2"></i>Bài Đăng Của Tôi</a
+              >
+              <a href="messages.html" class="btn btn-outline-primary btn-block"
+                ><i class="fas fa-envelope mr-2"></i>Tin Nhắn</a
+              >
+            </div>
+          </div>
+        </div>
+        <!-- Right Column -->
+        <div class="col-lg-8">
+          <div class="bg-light p-30">
+            <h3 class="position-relative text-uppercase mb-4">
+              <span class="bg-secondary pr-3">Chỉnh Sửa Thông Tin</span>
+            </h3>
+            <form id="profileForm">
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="fullName"
+                      >Họ và tên <span class="text-danger">*</span></label
+                    ><input
+                      type="text"
+                      class="form-control"
+                      id="fullName"
+                      name="hoTen"
+                      placeholder="Nguyễn Văn A"
+                      required
+                    />
+                    <div class="invalid-feedback"></div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="email">Email</label
+                    ><input
+                      type="email"
+                      class="form-control"
+                      id="email"
+                      name="email"
+                      readonly
+                    /><small class="text-muted">Email không thể thay đổi</small>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="phone"
+                      >Số điện thoại <span class="text-danger">*</span></label
+                    ><input
+                      type="tel"
+                      class="form-control"
+                      id="phone"
+                      name="soDienThoai"
+                      placeholder="0123456789"
+                      required
+                    />
+                    <div class="invalid-feedback"></div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="birthday">Ngày sinh</label
+                    ><input
+                      type="date"
+                      class="form-control"
+                      id="birthday"
+                      name="ngaySinh"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="address"
+                  >Địa chỉ <span class="text-danger">*</span></label
+                ><textarea
+                  class="form-control"
+                  id="address"
+                  name="diaChi"
+                  rows="2"
+                  placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"
+                  required
+                ></textarea>
+                <div class="invalid-feedback"></div>
+              </div>
+              <div class="form-group">
+                <label for="bio">Giới thiệu bản thân</label
+                ><textarea
+                  class="form-control"
+                  id="bio"
+                  name="gioiThieu"
+                  rows="4"
+                  placeholder="Viết vài dòng giới thiệu về bản thân..."
+                ></textarea
+                ><small class="text-muted">Tối đa 500 ký tự</small>
+              </div>
+              <h5 class="mb-3">Liên kết mạng xã hội (tùy chọn)</h5>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="facebook">Facebook</label>
+                    <div class="input-group">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text"
+                          ><i class="fab fa-facebook-f"></i
+                        ></span>
+                      </div>
+                      <input
+                        type="url"
+                        class="form-control"
+                        id="facebook"
+                        name="facebook"
+                        placeholder="https://facebook.com/username"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="zalo">Zalo</label>
+                    <div class="input-group">
+                      <div class="input-group-prepend">
+                        <span class="input-group-text"
+                          ><i class="fas fa-phone"></i
+                        ></span>
+                      </div>
+                      <input
+                        type="tel"
+                        class="form-control"
+                        id="zalo"
+                        name="zalo"
+                        placeholder="0123456789"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <h5 class="mb-3 mt-4">Đổi mật khẩu</h5>
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="currentPassword">Mật khẩu hiện tại</label
+                    ><input
+                      type="password"
+                      class="form-control"
+                      id="currentPassword"
+                      name="matKhauHienTai"
+                    />
+                    <div class="invalid-feedback"></div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="newPassword">Mật khẩu mới</label
+                    ><input
+                      type="password"
+                      class="form-control"
+                      id="newPassword"
+                      name="matKhauMoi"
+                    />
+                    <div class="invalid-feedback"></div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label for="confirmPassword">Xác nhận mật khẩu</label
+                    ><input
+                      type="password"
+                      class="form-control"
+                      id="confirmPassword"
+                      name="xacNhanMatKhau"
+                    />
+                    <div class="invalid-feedback"></div>
+                  </div>
+                </div>
+              </div>
+              <small class="text-muted"
+                >Để trống nếu không muốn đổi mật khẩu</small
+              >
+              <div class="form-group mt-4 mb-0">
+                <button
+                  type="submit"
+                  class="btn btn-primary py-2 px-4"
+                  id="updateBtn"
+                >
+                  <i class="fas fa-save mr-1"></i> Cập Nhật Thông Tin
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-secondary py-2 px-4 ml-2"
+                  onclick="resetForm()"
+                >
+                  <i class="fas fa-undo mr-1"></i> Khôi Phục
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-danger py-2 px-4 ml-2"
+                  onclick="deleteAccount()"
+                >
+                  <i class="fas fa-trash mr-1"></i> Xóa Tài Khoản
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shared Footer Placeholder -->
+    <div id="app-footer"></div>
+
+    <!-- Scripts: vendor -> main -> api -> layout -> page -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
+    <script src="lib/easing/easing.min.js"></script>
+    <script src="lib/owlcarousel/owl.carousel.min.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/profile.js"></script>
+  </body>
+</html>

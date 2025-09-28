@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Đăng Bài Mới - Thanh Lý Đồ Cũ</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="Đăng bài bán đồ cũ, đăng tin mua bán" name="keywords" />
+    <meta
+      content="Tạo bài đăng mới để bán đồ cũ trên website"
+      name="description"
+    />
+
+    <!-- Favicon -->
+    <link href="img/favicon.ico" rel="icon" />
+
+    <!-- Google Web Fonts -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Font Awesome -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- Libraries Stylesheet -->
+    <link href="lib/animate/animate.min.css" rel="stylesheet" />
+    <link href="lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet" />
+
+    <!-- Customized Bootstrap Stylesheet -->
+    <link href="css/style.css" rel="stylesheet" />
+  </head>
+
+  <body>
+    <body>
+      <!-- Shared Header Placeholder -->
+      <div id="app-header"></div>
+                    class="badge text-secondary border border-secondary rounded-circle"
+                    style="padding-bottom: 2px"
+                    >0</span
+                  >
+                </a>
+              </div>
+            </div>
+          </nav>
+        </div>
+      </div>
+    </div>
+    <!-- Navbar End -->
+
+    <!-- Breadcrumb Start -->
+    <div class="container-fluid">
+      <div class="row px-xl-5">
+        <div class="col-12">
+          <nav class="breadcrumb bg-light mb-30">
+            <a class="breadcrumb-item text-dark" href="index.html">Trang Chủ</a>
+            <span class="breadcrumb-item active">Đăng Bài Mới</span>
+          </nav>
+        </div>
+      </div>
+    </div>
+    <!-- Breadcrumb End -->
+
+    <!-- Create Post Start -->
+    <div class="container-fluid">
+      <div class="row px-xl-5">
+        <div class="col-lg-8 offset-lg-2">
+          <h3 class="position-relative text-uppercase mb-4">
+            <span class="bg-secondary pr-3">Đăng Bài Bán Đồ Cũ</span>
+          </h3>
+
+          <div class="bg-light p-30">
+            <form id="createPostForm" enctype="multipart/form-data">
+              <!-- Tiêu đề -->
+              <div class="form-group">
+                <label for="postTitle"
+                  >Tiêu đề bài đăng <span class="text-danger">*</span></label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  id="postTitle"
+                  name="tieuDe"
+                  placeholder="VD: Bán iPhone 12 Pro Max còn mới 98%"
+                  required
+                />
+                <div class="invalid-feedback"></div>
+              </div>
+
+              <!-- Danh mục -->
+              <div class="form-group">
+                <label for="postCategory"
+                  >Danh mục <span class="text-danger">*</span></label
+                >
+                <select
+                  class="form-control"
+                  id="postCategory"
+                  name="danhMuc"
+                  required
+                >
+                  <option value="">-- Chọn danh mục --</option>
+                  <!-- Categories will be loaded here -->
+                </select>
+                <div class="invalid-feedback"></div>
+              </div>
+
+              <!-- Giá -->
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="postPrice"
+                      >Giá bán (VNĐ) <span class="text-danger">*</span></label
+                    >
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="postPrice"
+                      name="gia"
+                      placeholder="500000"
+                      min="1000"
+                      required
+                    />
+                    <div class="invalid-feedback"></div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="postCondition">Tình trạng</label>
+                    <select
+                      class="form-control"
+                      id="postCondition"
+                      name="tinhTrang"
+                    >
+                      <option value="Mới">Mới (chưa sử dụng)</option>
+                      <option value="Như mới">Như mới (sử dụng ít)</option>
+                      <option value="Tốt" selected>
+                        Tốt (hoạt động bình thường)
+                      </option>
+                      <option value="Khá">Khá (có vài lỗi nhỏ)</option>
+                      <option value="Cũ">Cũ (nhiều vết xước)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mô tả -->
+              <div class="form-group">
+                <label for="postDescription"
+                  >Mô tả chi tiết <span class="text-danger">*</span></label
+                >
+                <textarea
+                  class="form-control"
+                  id="postDescription"
+                  name="moTa"
+                  rows="5"
+                  placeholder="Mô tả chi tiết về sản phẩm, tình trạng, lý do bán..."
+                  required
+                ></textarea>
+                <div class="invalid-feedback"></div>
+              </div>
+
+              <!-- Upload ảnh -->
+              <div class="form-group">
+                <label for="postImages"
+                  >Hình ảnh sản phẩm <span class="text-danger">*</span></label
+                >
+                <input
+                  type="file"
+                  class="form-control-file"
+                  id="postImages"
+                  name="images"
+                  multiple
+                  accept="image/*"
+                  required
+                />
+                <small class="form-text text-muted"
+                  >Có thể chọn nhiều ảnh. Kích thước tối đa mỗi ảnh: 5MB</small
+                >
+                <div class="invalid-feedback"></div>
+                <div id="imagePreview" class="mt-3"></div>
+              </div>
+
+              <!-- Địa chỉ -->
+              <div class="form-group">
+                <label for="postAddress">Địa chỉ giao dịch</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="postAddress"
+                  name="diaDiem"
+                  placeholder="VD: Quận 1, TP.HCM"
+                />
+                <small class="form-text text-muted"
+                  >Địa điểm để người mua có thể đến xem và nhận hàng</small
+                >
+              </div>
+
+              <!-- Tags -->
+              <div class="form-group">
+                <label for="postTags">Từ khóa (Tags)</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="postTags"
+                  name="tags"
+                  placeholder="VD: iphone, apple, điện thoại"
+                />
+                <small class="form-text text-muted"
+                  >Các từ khóa giúp người mua tìm thấy bài đăng dễ hơn (cách
+                  nhau bằng dấu phẩy)</small
+                >
+              </div>
+
+              <!-- Buttons -->
+              <div class="form-group mb-0">
+                <button
+                  type="submit"
+                  class="btn btn-primary py-2 px-4"
+                  id="submitBtn"
+                >
+                  <i class="fas fa-plus mr-1"></i> Đăng Bài
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-secondary py-2 px-4 ml-2"
+                  onclick="window.history.back()"
+                >
+                  <i class="fas fa-arrow-left mr-1"></i> Quay Lại
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Create Post End -->
+
+    <!-- Shared Footer Placeholder -->
+    <div id="app-footer"></div>
+
+  <!-- JavaScript Libraries -->
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
+  <script src="lib/easing/easing.min.js"></script>
+  <script src="lib/owlcarousel/owl.carousel.min.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/create-post.js"></script>
+  </body>
+</html>
