@@ -2,16 +2,53 @@
 // Index Page - Trang chủ website trao đổi đồ cũ
 // =============================================================================
 
+// C2C: Sort posts by service priority (Featured > VIP > Boost > Regular)
+function sortPostsByServicePriority(posts) {
+  if (!Array.isArray(posts)) return posts;
+  
+  return posts.sort((a, b) => {
+    // Priority scoring: Featured = 1000, VIP = 100, Boost = 10, Regular = 0
+    const getScore = (post) => {
+      let score = 0;
+      if (post.tinhNangDichVu) {
+        if (post.tinhNangDichVu.noiBat) score += 1000; // Featured (admin-marked)
+        if (post.tinhNangDichVu.tinVip) score += 100;  // VIP (user-purchased)
+        if (post.tinhNangDichVu.dayTin) score += 10;   // Boosted (user-purchased)
+      }
+      return score;
+    };
+    
+    const scoreA = getScore(a);
+    const scoreB = getScore(b);
+    
+    // Higher score = higher priority (display first)
+    if (scoreA !== scoreB) return scoreB - scoreA;
+    
+    // Same priority: sort by date (newest first)
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   initializeIndexPage();
+  // Tự động làm mới block sản phẩm khi có cập nhật từ Admin (giảm giá/nổi bật)
+  let refreshTimer = null;
+  window.addEventListener('post:updated', () => {
+    // debounce để tránh gọi nhiều lần liên tiếp
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => {
+      try { loadFeaturedProducts(); } catch(_) {}
+      try { loadRecentProducts(); } catch(_) {}
+    }, 300);
+  });
 });
 
 async function initializeIndexPage() {
   // Setup event listeners
   setupEventListeners();
 
-  // Load featured categories
-  await loadFeaturedCategories();
+  // Load featured categories (homepage)
+  await loadHomepageCategories();
 
   // Load featured products
   await loadFeaturedProducts();
@@ -52,52 +89,94 @@ function handleHeroSearch(e) {
   }
 }
 
-async function loadFeaturedCategories() {
+async function loadHomepageCategories() {
   try {
-    const response = await ApiService.get("/categories?featured=true");
-    const categories = response.data;
+    // Fetch active categories with stats for counts
+    const response = await ApiService.get(
+      API_CONFIG.ENDPOINTS.CATEGORIES,
+      { includeStats: true }
+    );
+    const categories =
+      response.categories || response.data || response;
 
-    displayFeaturedCategories(categories);
-    updateNavigationCategories(categories.slice(0, 10)); // Top 10 for navigation
+    renderHomepageCategories(Array.isArray(categories) ? categories : []);
   } catch (error) {
-    console.error("Error loading featured categories:", error);
+    console.error("Error loading homepage categories:", error);
   }
 }
 
-function displayFeaturedCategories(categories) {
+function renderHomepageCategories(categories) {
   const container = document.querySelector("#featuredCategoriesContainer");
   if (!container) return;
 
-  if (categories.length === 0) return;
+  if (!Array.isArray(categories) || categories.length === 0) {
+    container.innerHTML = `
+      <div class="col-12 text-center py-4 text-muted">Chưa có danh mục nào</div>
+    `;
+    return;
+  }
 
-  // Take first 8 categories
-  const displayCategories = categories.slice(0, 8);
+  // Reorder to match navbar (push "Khác" to the bottom) then show up to 12
+  const normalize = (s) => (s || "").toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const isOther = (c) => {
+    const name = normalize(c.tenDanhMuc || c.name || c.title);
+    const slug = normalize(c.slug);
+    return name === 'khac' || slug === 'other' || slug === 'khac';
+  };
+  const ordered = categories.filter((c) => !isOther(c)).concat(categories.filter(isOther));
+
+  // Show up to 12 categories on homepage
+  const displayCategories = ordered.slice(0, 12);
+  
+  // Map category images based on category name
+  const getCategoryImage = (categoryName) => {
+    const normalizedName = normalize(categoryName);
+    
+    // Map specific category names to appropriate images
+    if (normalizedName.includes('dien tu') || normalizedName.includes('electronics')) {
+      return 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&h=400&fit=crop';
+    }
+    if (normalizedName.includes('thoi trang') || normalizedName.includes('fashion')) {
+      return 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=400&h=400&fit=crop';
+    }
+    if (normalizedName.includes('gia dung') || normalizedName.includes('home')) {
+      return 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=400&h=400&fit=crop';
+    }
+    if (normalizedName.includes('sach') || normalizedName.includes('van phong') || normalizedName.includes('book')) {
+      return 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400&h=400&fit=crop';
+    }
+    if (normalizedName.includes('xe') || normalizedName.includes('vehicle') || normalizedName.includes('co')) {
+      return 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=400&h=400&fit=crop';
+    }
+    if (normalizedName.includes('the thao') || normalizedName.includes('sport')) {
+      return 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=400&h=400&fit=crop';
+    }
+    if (normalizedName === 'khac' || normalizedName === 'other') {
+      return 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=400&h=400&fit=crop';
+    }
+    // Default image
+    return 'https://images.unsplash.com/photo-1513885535751-8b9238bd345a?w=400&h=400&fit=crop';
+  };
+
   let html = "";
-
-  displayCategories.forEach((category) => {
-    const imageUrl = category.hinhAnh || "img/cat-default.jpg";
-
+  displayCategories.forEach((category, idx) => {
+    const imageUrl = category.hinhAnh || getCategoryImage(category.tenDanhMuc);
+    const count = category.postCount || category.soLuongBaiDang || 0;
     html += `
-            <div class="col-lg-3 col-md-4 col-sm-6 pb-1">
-                <a class="text-decoration-none" href="#" data-category-id="${
-                  category._id
-                }">
-                    <div class="cat-item img-zoom d-flex align-items-center mb-4">
-                        <div class="overflow-hidden" style="width: 100px; height: 100px;">
-                            <img class="img-fluid" src="${imageUrl}" alt="${
-      category.tenDanhMuc
-    }">
-                        </div>
-                        <div class="flex-fill pl-3">
-                            <h6>${category.tenDanhMuc}</h6>
-                            <small class="text-body">${
-                              category.soLuongBaiDang || 0
-                            } Sản Phẩm</small>
-                        </div>
-                    </div>
-                </a>
+      <div class="col-lg-3 col-md-4 col-sm-6 pb-1">
+        <a class="text-decoration-none" href="shop.html?category=${category._id}" data-category-id="${category._id}">
+          <div class="cat-item img-zoom d-flex align-items-center mb-4">
+            <div class="overflow-hidden" style="width: 100px; height: 100px;">
+              <img class="img-fluid" src="${imageUrl}" alt="${category.tenDanhMuc}">
             </div>
-        `;
+            <div class="flex-fill pl-3">
+              <h6>${category.tenDanhMuc}</h6>
+              <small class="text-body">${count} Sản Phẩm</small>
+            </div>
+          </div>
+        </a>
+      </div>
+    `;
   });
 
   container.innerHTML = html;
@@ -123,9 +202,12 @@ function updateNavigationCategories(categories) {
 async function loadFeaturedProducts() {
   try {
     const response = await ApiService.get(
-      "/posts/search?featured=true&limit=8"
+      "/posts/featured?limit=10"
     );
-    const products = response.data.posts;
+    let products = (response.data && response.data.posts) || response.posts || response.data?.data?.posts || response.data?.data?.items || [];
+
+    // C2C: Sort by service priority (Featured > VIP > Boost > Regular)
+    products = sortPostsByServicePriority(products);
 
     displayFeaturedProducts(products);
   } catch (error) {
@@ -157,7 +239,7 @@ function displayFeaturedProducts(products) {
 async function loadRecentProducts() {
   try {
     const response = await ApiService.get(
-      "/posts/search?sortBy=newest&limit=8"
+      "/posts/search?sortBy=newest&limit=10&loaiGia=ban"
     );
     const products = response.data.posts;
 
@@ -187,21 +269,23 @@ function createProductCard(product) {
       ? product.hinhAnh[0]
       : "img/product-placeholder.jpg";
 
-  const price =
-    product.gia > 0
-      ? Utils.formatCurrency(product.gia)
-      : '<span class="text-success">Trao đổi</span>';
+  const basePrice = (window.Formatters ? Formatters.getPriceLabel(product.loaiGia, product.gia) : (product.loaiGia === 'cho-mien-phi' ? '<span class="text-success">Miễn phí</span>' : (product.loaiGia === 'trao-doi' ? '<span class="text-primary">Trao đổi</span>' : Utils.formatCurrency(product.gia || 0))));
 
-  const condition = getConditionText(product.tinhTrang);
-  const timeAgo = Utils.formatRelativeTime(product.ngayDang);
+  const condition = (window.Formatters ? Formatters.getConditionText(product.tinhTrang) : getConditionText(product.tinhTrang));
+  const when = product.createdAt || product.ngayDang || product.updatedAt;
+  const timeAgo = Utils.formatRelativeTime(when);
 
   // Determine if user is logged in for heart icon
   const isLoggedIn = AuthManager.isLoggedIn();
   const heartIcon = isLoggedIn ? "far fa-heart" : "far fa-heart";
 
+  const highlightClass = (window.ProductDecorators && ProductDecorators.isHighlighted(product)) ? ' product-highlight' : '';
+  const priceBlock = (window.ProductDecorators ? ProductDecorators.applyPrice(product, basePrice) : `<h5 class="text-primary mb-0">${basePrice}</h5>`);
+  const productBadges = (window.ProductDecorators ? ProductDecorators.renderBadges(product) : '');
+
   return `
         <div class="col-lg-3 col-md-4 col-sm-6 pb-1">
-            <div class="product-item bg-light mb-4">
+            <div class="product-item bg-light mb-4${highlightClass}">
                 <div class="product-img position-relative overflow-hidden">
                     <img class="img-fluid w-100" src="${imageUrl}" alt="${
     product.tieuDe
@@ -238,24 +322,19 @@ function createProductCard(product) {
                     }">
                         ${Utils.truncateText(product.tieuDe, 45)}
                     </a>
-                    <div class="d-flex align-items-center justify-content-center mt-2">
-                        <h5 class="text-primary mb-0">${price}</h5>
-                    </div>
+          <div class="d-flex align-items-center justify-content-center mt-2">
+            ${priceBlock}
+          </div>
                     <div class="d-flex align-items-center justify-content-center mt-1">
-                        <small class="text-muted mr-2">
-                            <i class="fas fa-map-marker-alt"></i> ${Utils.truncateText(
-                              product.diaChi,
-                              20
-                            )}
-                        </small>
+            <small class="text-muted mr-2">
+              <i class="fas fa-map-marker-alt"></i> ${Utils.truncateText((window.Formatters ? Formatters.getLocation(product) : (product.diaDiem || product.diaChi || '')), 20)}
+            </small>
                         <small class="text-muted">
                             <i class="fas fa-clock"></i> ${timeAgo}
                         </small>
                     </div>
-                    <div class="mt-2">
-                        <span class="badge badge-${getConditionBadgeClass(
-                          product.tinhTrang
-                        )} badge-sm">
+          <div class="mt-2">
+                        <span class="badge badge-${(window.Formatters ? Formatters.getConditionBadgeClass(product.tinhTrang) : getConditionBadgeClass(product.tinhTrang))} badge-sm">
                             ${condition}
                         </span>
                         ${
@@ -267,6 +346,7 @@ function createProductCard(product) {
                         `
                             : ""
                         }
+            ${productBadges ? `<span class="ml-1">${productBadges}</span>` : ''}
                     </div>
                 </div>
             </div>
@@ -276,22 +356,22 @@ function createProductCard(product) {
 
 function getConditionText(condition) {
   const conditionMap = {
-    new: "Mới",
-    "like-new": "Như mới",
-    good: "Tốt",
-    fair: "Khá",
-    poor: "Cần sửa chữa",
+    'moi': "Mới",
+    'nhu-moi': "Như mới",
+    'tot': "Tốt",
+    'kha': "Khá",
+    'can-sua-chua': "Cần sửa chữa",
   };
   return conditionMap[condition] || condition;
 }
 
 function getConditionBadgeClass(condition) {
   const classMap = {
-    new: "success",
-    "like-new": "info",
-    good: "primary",
-    fair: "warning",
-    poor: "danger",
+    'moi': "success",
+    'nhu-moi': "info",
+    'tot': "primary",
+    'kha': "warning",
+    'can-sua-chua': "danger",
   };
   return classMap[condition] || "secondary";
 }
@@ -299,8 +379,19 @@ function getConditionBadgeClass(condition) {
 function setupCarousel() {
   // Setup hero carousel with proper intervals
   $("#header-carousel").carousel({
-    interval: 5000, // 5 seconds
+    interval: 4000, // auto rotate faster
     ride: "carousel",
+    pause: false,
+  });
+
+  // Click anywhere on the slide caption to go to shop page
+  document.querySelectorAll('#header-carousel .carousel-item .carousel-caption').forEach((el)=>{
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', function(e){
+      // avoid interfering with internal buttons/links
+      if (e.target && (e.target.tagName === 'A' || e.target.closest('a'))) return;
+      window.location.href = 'shop.html';
+    });
   });
 
   // Setup product carousels if they exist

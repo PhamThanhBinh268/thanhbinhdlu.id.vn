@@ -47,7 +47,7 @@ module.exports = (io) => {
     // Xử lý gửi tin nhắn
     socket.on("send_message", async (data) => {
       try {
-        const { receiverId, content, postId } = data;
+        const { receiverId, content, postId, type } = data;
 
         // Validate dữ liệu
         if (!receiverId || !content || content.trim().length === 0) {
@@ -68,6 +68,7 @@ module.exports = (io) => {
           nguoiNhan: receiverId,
           noiDung: content.trim(),
           baiDangLienQuan: postId || null,
+          loaiTinNhan: type === 'image' ? 'image' : 'text',
         });
 
         await message.save();
@@ -89,10 +90,20 @@ module.exports = (io) => {
           });
         }
 
-        // Xác nhận cho người gửi
+        // Phát lại cho chính người gửi để đồng bộ UI
+        io.to(socket.id).emit("new_message", {
+          message: message,
+          fromUser: {
+            _id: socket.user._id,
+            hoTen: socket.user.hoTen,
+            avatar: socket.user.avatar,
+          },
+        });
+
+        // Vẫn phát sự kiện xác nhận (giữ tương thích nếu client dùng)
         socket.emit("message_sent", {
           message: message,
-          tempId: data.tempId, // Client có thể gửi kèm tempId để track
+          tempId: data.tempId,
         });
 
         console.log(`Message from ${socket.user.hoTen} to ${receiver.hoTen}`);

@@ -15,10 +15,13 @@ const server = createServer(app);
 // Socket.IO setup
 const io = new Server(server, {
   cors: {
-    origin: process.env.CORS_ORIGINS?.split(",") || ["http://localhost:3000"],
+    origin: process.env.CORS_ORIGINS?.split(",") || ["http://thanhbinhdlu.id.vn", "http://localhost:3000"],
     methods: ["GET", "POST"],
   },
 });
+
+// Cho phép các route truy cập Socket.IO thông qua req.app.get('io')
+app.set('io', io);
 
 // Middleware (Security + CSP)
 app.use(
@@ -35,6 +38,7 @@ app.use(
           "https://stackpath.bootstrapcdn.com",
           "https://cdn.jsdelivr.net",
         ],
+        scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers (onclick, etc.) - THÊM DÒNG NÀY
         styleSrc: [
           "'self'",
           "https://fonts.googleapis.com",
@@ -42,9 +46,38 @@ app.use(
           "https://stackpath.bootstrapcdn.com",
           "'unsafe-inline'", // inline styles (e.g., profile page quick styles)
         ],
-        fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-        imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com"],
-        connectSrc: ["'self'", "ws:", "wss:", "https://res.cloudinary.com"], // allow websocket + cloudinary direct calls if any
+        fontSrc: [
+          "'self'",
+          "https://fonts.gstatic.com",
+          "https://cdnjs.cloudflare.com",
+          "data:"
+        ],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "blob:",
+          "https://res.cloudinary.com",
+          "https://via.placeholder.com",
+          "https://ui-avatars.com",
+          // Cho dữ liệu seed/demo: ảnh từ Unsplash
+          "https://images.unsplash.com",
+          "https://plus.unsplash.com",
+          "https://source.unsplash.com"
+        ],
+        connectSrc: [
+          "'self'",
+          "ws:",
+          "wss:",
+          "https://res.cloudinary.com",
+          "https://code.jquery.com",
+          "https://cdnjs.cloudflare.com",
+          "https://stackpath.bootstrapcdn.com",
+          "https://cdn.jsdelivr.net",
+          "https://fonts.googleapis.com",
+          "https://fonts.gstatic.com",
+          // Cho enhanced search bar (tải danh mục tỉnh/thành)
+          "https://provinces.open-api.vn"
+        ], // allow websocket + external cdns used by site
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         frameAncestors: ["'self'"],
@@ -138,8 +171,20 @@ app.use(
   express.static(CLIENT_ROOT, {
     extensions: ["html"],
     maxAge: process.env.NODE_ENV === "production" ? "1h" : 0,
-    setHeaders: (res) => {
+    etag: false, // Disable ETag
+    lastModified: false, // Disable Last-Modified
+    setHeaders: (res, filePath) => {
       res.setHeader("X-Powered-By", "oldmarket");
+      // Disable ALL cache for development
+      if (process.env.NODE_ENV !== "production") {
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        res.setHeader("Surrogate-Control", "no-store");
+        // Remove ETag if somehow still there
+        res.removeHeader("ETag");
+        res.removeHeader("Last-Modified");
+      }
     },
   })
 );
@@ -167,6 +212,8 @@ app.use("/api/messages", require("./routes/messages"));
 app.use("/api/transactions", require("./routes/transactions"));
 app.use("/api/ratings", require("./routes/ratings"));
 app.use("/api/cloudinary", require("./routes/cloudinary"));
+app.use("/api/stats", require("./routes/stats"));
+app.use("/api/vip-packages", require("./routes/vip-packages"));
 
 // Diagnostics route (không lộ secret)
 app.get("/api/diagnostics/status", (req, res) => {
@@ -219,22 +266,31 @@ app.use("*", (req, res) => {
 const net = require("net");
 
 async function isPortFree(port) {
-  return new Promise((resolve, reject) => {
-    const tester = net
-      .createServer()
-      .once("error", (err) => {
-        if (err.code === "EADDRINUSE") resolve(false);
-        else reject(err);
-      })
-      .once("listening", () => {
-        tester
-          .once("close", () => {
-            resolve(true);
-          })
-          .close();
-      })
-      .listen(port, "0.0.0.0");
-  });
+  // Kiểm tra cả IPv6 (::) và IPv4 (0.0.0.0) để tránh false-positive trên Windows
+  const canBind = (host) =>
+    new Promise((resolve) => {
+      const srv = net
+        .createServer()
+        .once("error", (err) => {
+          if (err && (err.code === "EADDRINUSE" || err.code === "EACCES")) {
+            resolve(false);
+          } else {
+            // Bất kỳ lỗi nào khác coi như không khả dụng để an toàn
+            resolve(false);
+          }
+        })
+        .once("listening", () => {
+          srv
+            .once("close", () => resolve(true))
+            .close();
+        })
+        .listen(port, host);
+    });
+
+  const v6 = await canBind("::");
+  if (!v6) return false;
+  const v4 = await canBind("0.0.0.0");
+  return v4;
 }
 
 async function findAvailablePort(startPort, maxOffset = 10) {
@@ -252,6 +308,14 @@ async function findAvailablePort(startPort, maxOffset = 10) {
 }
 
 let BASE_PORT = parseInt(process.env.PORT, 10) || 8080;
+// Cho phép cấu hình bật/tắt fallback cổng.
+// Mặc định: bật (TRUE) để tránh gián đoạn khi dev.
+// Đặt ALLOW_PORT_FALLBACK=false để buộc chạy đúng PORT (nếu bận sẽ thoát với hướng dẫn).
+const ALLOW_PORT_FALLBACK = (() => {
+  const v = process.env.ALLOW_PORT_FALLBACK;
+  if (v == null) return true; // default on
+  return /^(1|true|yes)$/i.test(String(v));
+})();
 
 server.on("error", (err) => {
   console.error("[SERVER ERROR EVENT]", err);
@@ -272,17 +336,31 @@ process.on("exit", (code) => {
 
 const startServer = async () => {
   console.log("[DEBUG] startServer invoked");
-  // Tìm port trống trước khi kết nối DB để fail nhanh nếu không có cổng
-  let PORT_TO_USE;
+  // Xác định PORT_TO_USE theo chế độ fallback
+  let PORT_TO_USE = BASE_PORT;
   try {
-    PORT_TO_USE = await findAvailablePort(BASE_PORT, 15);
-    if (PORT_TO_USE !== BASE_PORT) {
-      console.warn(
-        `⚠️  Cổng ${BASE_PORT} đang bận. Tự động chuyển sang cổng ${PORT_TO_USE}`
-      );
+    const baseFree = await isPortFree(BASE_PORT);
+    if (!baseFree) {
+      if (ALLOW_PORT_FALLBACK) {
+        PORT_TO_USE = await findAvailablePort(BASE_PORT + 1, 15);
+        if (PORT_TO_USE !== BASE_PORT) {
+          console.warn(
+            `⚠️  Cổng ${BASE_PORT} đang bận. Tự động chuyển sang cổng ${PORT_TO_USE}`
+          );
+        }
+      } else {
+        console.error(
+          `❌ Cổng ${BASE_PORT} đang bận và ALLOW_PORT_FALLBACK=false.\n` +
+            `👉 Hãy tắt tiến trình đang dùng cổng hoặc chọn cổng khác bằng cách đặt biến môi trường PORT.\n` +
+            `• Kiểm tra cổng: netstat -ano | findstr :${BASE_PORT}\n` +
+            `• Diệt PID: taskkill /PID <PID> /F\n` +
+            `• Hoặc chạy cổng khác: (PowerShell) $env:PORT=${BASE_PORT + 1}; npm start`
+        );
+        process.exit(1);
+      }
     }
   } catch (e) {
-    console.error("❌ Không thể tìm được cổng khả dụng:", e.message);
+    console.error("❌ Lỗi kiểm tra cổng:", e.message);
     process.exit(1);
   }
 

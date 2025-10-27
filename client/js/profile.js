@@ -29,6 +29,12 @@ async function initializeProfilePage() {
 
     // Update navigation for logged in user
     updateNavigationForUser();
+
+    // Initialize transactions section if exists
+    initTransactionsSection();
+
+    // Initialize saved posts section if exists
+    initSavedPostsSection();
   } catch (error) {
     console.error("Initialize profile page error:", error);
     Utils.showToast("Có lỗi khi tải hồ sơ cá nhân", "error");
@@ -72,6 +78,14 @@ function updateProfileDisplay() {
   // Update rating
   document.getElementById("profileRating").textContent =
     currentUser.diemUyTin || 0;
+
+  // Render initial reputation badge (seller badge needs stats)
+  try {
+    const badgeEl = document.getElementById('profileBadges');
+    if (badgeEl && window.UserDecorators) {
+      badgeEl.innerHTML = UserDecorators.renderBadges(currentUser, { totalPosts: 0 });
+    }
+  } catch(_){}
 }
 
 function fillProfileForm() {
@@ -109,12 +123,20 @@ async function loadUserStats() {
     const postsResponse = await ApiService.get(
       `${API_CONFIG.ENDPOINTS.POSTS}?nguoiDang=${currentUser._id}`
     );
-    document.getElementById("totalPosts").textContent =
-      postsResponse.pagination?.total || 0;
+    const totalPosts = postsResponse.pagination?.total || 0;
+    document.getElementById("totalPosts").textContent = totalPosts;
 
     // Load reviews count
     document.getElementById("totalReviews").textContent =
       currentUser.soLuotDanhGia || 0;
+
+    // Re-render badges with seller info
+    try {
+      const badgeEl = document.getElementById('profileBadges');
+      if (badgeEl && window.UserDecorators) {
+        badgeEl.innerHTML = UserDecorators.renderBadges(currentUser, { totalPosts });
+      }
+    } catch(_){}
   } catch (error) {
     console.error("Load user stats error:", error);
     document.getElementById("totalPosts").textContent = "0";
@@ -228,6 +250,13 @@ async function handleProfileUpdate(e) {
 
     Utils.showToast("Cập nhật hồ sơ thành công!", "success");
 
+    // Notify other parts (e.g., header) that user data updated
+    try {
+      window.dispatchEvent(
+        new CustomEvent('user:updated', { detail: { user: currentUser } })
+      );
+    } catch (_) {}
+
     // Clear password fields
     document.getElementById("currentPassword").value = "";
     document.getElementById("newPassword").value = "";
@@ -303,6 +332,13 @@ async function uploadAvatar(file) {
 
     // Cập nhật avatar trên navigation dropdown nếu có
     updateNavigationForUser();
+
+    // Notify layout/header to refresh avatar immediately
+    try {
+      window.dispatchEvent(
+        new CustomEvent('user:updated', { detail: { user: currentUser } })
+      );
+    } catch (_) {}
 
     Utils.showToast("Cập nhật avatar thành công!", "success");
   } catch (error) {
@@ -482,3 +518,214 @@ function updateNavigationForUser() {
     `;
   }
 }
+
+// =============================================================================
+// Transactions Section
+// =============================================================================
+let txState = { page: 1, limit: 10, type: 'all', trangThai: '' };
+
+function initTransactionsSection() {
+  const container = document.getElementById('transactionsSection');
+  if (!container) return; // page may not include section
+
+  // Wire filters
+  document.getElementById('txFilterAll')?.addEventListener('click', () => { txState.type = 'all'; txState.page = 1; loadTransactions(true); });
+  document.getElementById('txFilterBuying')?.addEventListener('click', () => { txState.type = 'buying'; txState.page = 1; loadTransactions(true); });
+  document.getElementById('txFilterSelling')?.addEventListener('click', () => { txState.type = 'selling'; txState.page = 1; loadTransactions(true); });
+
+  container.querySelectorAll('[data-status]')?.forEach(btn => {
+    btn.addEventListener('click', () => { txState.trangThai = btn.getAttribute('data-status') || ''; txState.page = 1; loadTransactions(true); });
+  });
+
+  document.getElementById('txLoadMore')?.addEventListener('click', () => { txState.page += 1; loadTransactions(false); });
+
+  // Initial load
+  loadTransactions(true);
+}
+
+async function loadTransactions(reset) {
+  try {
+    const params = { page: txState.page, limit: txState.limit, type: txState.type };
+    if (txState.trangThai) params.trangThai = txState.trangThai;
+
+    const res = await ApiService.get('/transactions', params);
+    const list = res.transactions || res.data || [];
+    const total = res.pagination?.total || list.length;
+    const pages = res.pagination?.pages || 1;
+
+    renderTransactions(list, reset);
+
+    // Toggle load more
+    const loadMoreBtn = document.getElementById('txLoadMore');
+    if (loadMoreBtn) {
+      const hasMore = txState.page < pages;
+      loadMoreBtn.classList.toggle('d-none', !hasMore);
+    }
+  } catch (e) {
+    console.error('[Transactions] load error', e);
+    Utils.showToast('Không thể tải danh sách giao dịch', 'error');
+  }
+}
+
+function renderTransactions(items, reset) {
+  const wrap = document.getElementById('transactionsList');
+  if (!wrap) return;
+  if (reset) wrap.innerHTML = '';
+
+  if (!items.length && reset) {
+    wrap.innerHTML = '<div class="col-12"><div class="text-center text-muted py-4">Chưa có giao dịch nào</div></div>';
+    return;
+  }
+
+  const html = items.map(tx => transactionCard(tx)).join('');
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+  Array.from(temp.children).forEach(c => wrap.appendChild(c));
+}
+
+function transactionCard(tx) {
+  const post = tx.baiDang || {};
+  const img = (post.hinhAnh && post.hinhAnh[0]) || 'img/product-placeholder.jpg';
+  const price = Utils.formatCurrency(tx.giaThanhToan || post.gia || 0);
+  const status = humanizeTxStatus(tx.trangThai);
+  const otherParty = tx.nguoiBan?._id === currentUser._id ? (tx.nguoiMua?.hoTen || 'Người mua') : (tx.nguoiBan?.hoTen || 'Người bán');
+  return `
+    <div class="col-md-12">
+      <div class="d-flex align-items-center border p-2 mb-2 rounded" style="gap:12px;">
+        <img src="${img}" alt="product" style="width:64px;height:64px;object-fit:cover;border-radius:6px;" />
+        <div class="flex-fill">
+          <div class="d-flex justify-content-between align-items-center">
+            <a href="transaction-detail.html?id=${tx._id}" class="font-weight-bold text-dark">${Utils.truncateText(post.tieuDe || 'Sản phẩm', 60)}</a>
+            <span class="badge badge-secondary">${status}</span>
+          </div>
+          <div class="text-muted small mt-1">Đối tác: ${otherParty}</div>
+          <div class="text-primary mt-1">${price}</div>
+        </div>
+        <a class="btn btn-sm btn-outline-primary" href="transaction-detail.html?id=${tx._id}">Xem</a>
+      </div>
+    </div>
+  `;
+}
+
+function humanizeTxStatus(s) {
+  const map = {
+    'dang-thoa-thuan': 'Đang thỏa thuận',
+    'da-dong-y': 'Đã đồng ý',
+    'hoan-thanh': 'Hoàn thành',
+    'huy-bo': 'Hủy bỏ',
+  };
+  return map[s] || s || '--';
+}
+
+// =============================================================================
+// Saved Posts Section
+// =============================================================================
+let savedState = { page: 1, limit: 12 };
+
+function initSavedPostsSection() {
+  const container = document.getElementById('savedPostsSection');
+  if (!container) return;
+
+  document.getElementById('savedLoadMore')?.addEventListener('click', () => {
+    savedState.page += 1;
+    loadSavedPosts(false);
+  });
+
+  // Initial load
+  loadSavedPosts(true);
+}
+
+async function loadSavedPosts(reset) {
+  try {
+    const res = await ApiService.get('/posts/saved/me', {
+      page: savedState.page,
+      limit: savedState.limit,
+    });
+    const list = res.posts || res.data || [];
+    const pages = res.pagination?.pages || 1;
+
+    renderSavedPosts(list, reset);
+
+    // Toggle load more
+    const btn = document.getElementById('savedLoadMore');
+    if (btn) {
+      const hasMore = savedState.page < pages;
+      btn.classList.toggle('d-none', !hasMore);
+    }
+  } catch (e) {
+    console.error('[SavedPosts] load error', e);
+    Utils.showToast('Không thể tải danh sách đã lưu', 'error');
+  }
+}
+
+function renderSavedPosts(items, reset) {
+  const wrap = document.getElementById('savedPostsList');
+  if (!wrap) return;
+  if (reset) wrap.innerHTML = '';
+
+  if (!items.length && reset) {
+    wrap.innerHTML = '<div class="col-12"><div class="text-center text-muted py-4">Chưa lưu bài đăng nào</div></div>';
+    return;
+  }
+
+  const html = items.map(p => savedPostCard(p)).join('');
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+  Array.from(temp.children).forEach(c => wrap.appendChild(c));
+}
+
+function savedPostCard(post) {
+  const img = (post.hinhAnh && post.hinhAnh[0]) || 'img/product-placeholder.jpg';
+  const price = post.gia > 0 ? Utils.formatCurrency(post.gia) : 'Trao đổi';
+  const conditionMap = { new: 'Mới', 'like-new': 'Như mới', good: 'Tốt', fair: 'Khá', poor: 'Cần sửa' };
+  const condition = conditionMap[post.tinhTrang] || post.tinhTrang || '';
+  const savedAt = post.savedAt ? Utils.formatDateTime(post.savedAt) : '';
+  return `
+    <div class="col-lg-4 col-md-6 col-sm-6 pb-1" data-post-id="${post._id}">
+      <div class="product-item bg-light mb-4">
+        <div class="product-img position-relative overflow-hidden" style="aspect-ratio:4/3;">
+          <img class="img-fluid w-100" style="height:100%;object-fit:cover;" src="${img}" alt="${post.tieuDe}" />
+          <div class="product-action">
+            <a class="btn btn-outline-dark btn-square" href="#" onclick="unsaveSavedPost('${post._id}', event)"><i class="fas fa-heart-broken"></i></a>
+            <a class="btn btn-outline-dark btn-square" href="detail.html?id=${post._id}" onclick="event.stopPropagation()"><i class="fa fa-eye"></i></a>
+          </div>
+        </div>
+        <div class="text-center py-3">
+          <a class="h6 text-decoration-none text-truncate d-block" href="detail.html?id=${post._id}">${post.tieuDe}</a>
+          <div class="d-flex justify-content-center align-items-center mt-1">
+            <h5 class="text-primary mb-0">${price}</h5>
+          </div>
+          <div class="small text-muted mt-1">${condition}${savedAt ? ' • Lưu: ' + savedAt : ''}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function unsaveSavedPost(postId, event) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+  if (!AuthManager.isLoggedIn()) {
+    return Utils.showToast('Vui lòng đăng nhập', 'warning');
+  }
+  try {
+    // Toggle save (server removes if already saved)
+    await ApiService.post(`/posts/${postId}/save`);
+    // Remove card from DOM
+    const card = document.querySelector(`#savedPostsList [data-post-id="${postId}"]`);
+    if (card && card.parentElement) card.parentElement.remove();
+    Utils.showToast('Đã bỏ lưu bài đăng', 'info');
+
+    // If list becomes empty after removal, reload base state
+    const remaining = document.querySelectorAll('#savedPostsList > div').length;
+    if (remaining === 0) {
+      savedState.page = 1;
+      loadSavedPosts(true);
+    }
+  } catch (e) {
+    console.error('[SavedPosts] unsave error', e);
+    Utils.showToast('Không thể bỏ lưu: ' + (e.message || ''), 'error');
+  }
+}
+
+// expose for inline onclick
+window.unsaveSavedPost = unsaveSavedPost;

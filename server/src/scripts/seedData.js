@@ -89,8 +89,12 @@ const seedData = async () => {
       },
     ];
 
-    for (const data of userData) {
-      const user = new User(data);
+    for (const [idx, data] of userData.entries()) {
+      const user = new User({
+        ...data,
+        // Đánh dấu một vài user là người bán đã xác minh để demo badge
+        daXacMinhNguoiBan: [0,2].includes(idx),
+      });
       await user.save();
       users.push(user);
     }
@@ -149,7 +153,7 @@ const seedData = async () => {
     console.log("📝 Tạo posts...");
     const posts = [];
     const postData = [
-      {
+      { // iPhone - thêm discount & highlight để demo Decorator
         tieuDe: "iPhone 12 Pro Max 128GB còn mới 95%",
         moTa: "iPhone 12 Pro Max màu xanh dương, 128GB. Máy còn rất mới, không trầy xước, pin zin 89%. Có đầy đủ hộp, sạc. Lý do bán: nâng cấp iPhone 15.",
         gia: 18000000,
@@ -162,10 +166,10 @@ const seedData = async () => {
         diaDiem: "Quận 1, TP.HCM",
         tinhTrang: "nhu-moi",
         trangThai: "approved",
-        tags: ["iphone", "apple", "smartphone"],
+        tags: ["iphone", "apple", "smartphone", "discount-15", "highlight"],
         luotXem: 156,
       },
-      {
+      { // Dell XPS - thêm discount
         tieuDe: "Laptop Dell XPS 13 i7 16GB RAM 512GB SSD",
         moTa: "Dell XPS 13 9310, Intel Core i7-1165G7, RAM 16GB, SSD 512GB. Laptop mỏng nhẹ, màn hình 4K touch. Còn bảo hành 8 tháng. Máy chạy mượt, phù hợp văn phòng và đồ họa.",
         gia: 22000000,
@@ -178,10 +182,10 @@ const seedData = async () => {
         diaDiem: "Quận 3, TP.HCM",
         tinhTrang: "tot",
         trangThai: "approved",
-        tags: ["dell", "laptop", "xps"],
+        tags: ["dell", "laptop", "xps", "discount-20"],
         luotXem: 89,
       },
-      {
+      { // Sách - thêm featured
         tieuDe: "Bộ sách giáo khoa lớp 12 đầy đủ các môn",
         moTa: "Trọn bộ sách giáo khoa lớp 12 mới nhất, bao gồm: Toán, Lý, Hóa, Sinh, Văn, Sử, Địa, Anh. Sách còn mới, ít sử dụng, có gạch chú ít. Phù hợp cho học sinh chuẩn bị thi THPT.",
         gia: 280000,
@@ -193,7 +197,7 @@ const seedData = async () => {
         diaDiem: "Đống Đa, Hà Nội",
         tinhTrang: "tot",
         trangThai: "approved",
-        tags: ["sach", "giao-khoa", "lop12"],
+        tags: ["sach", "giao-khoa", "lop12", "featured"],
         luotXem: 67,
       },
       {

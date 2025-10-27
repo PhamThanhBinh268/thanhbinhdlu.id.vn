@@ -69,3 +69,35 @@ router.post("/cleanup", authenticateToken, requireAdmin, async (req, res) => {
 });
 
 module.exports = router;
+// --- Chat/Image simple upload endpoint ---
+// POST /api/cloudinary/upload - authenticated simple image upload (used by chat)
+router.post("/upload", authenticateToken, async (req, res) => {
+  try {
+    const multer = require('multer');
+    const storage = multer.memoryStorage();
+    const upload = multer({
+      storage,
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) cb(null, true);
+        else cb(new Error('Chỉ chấp nhận file ảnh'), false);
+      }
+    }).single('file');
+
+    upload(req, res, async (err) => {
+      if (err) return res.status(400).json({ message: 'Lỗi upload: ' + err.message });
+      if (!req.file) return res.status(400).json({ message: 'Chưa chọn file' });
+      try {
+        const result = await uploadImageFromBuffer(req.file.buffer, {
+          folder: 'oldmarket/chat',
+          transformation: [{ width: 1280, height: 1280, crop: 'limit' }, { quality: 'auto' }]
+        });
+        return res.json({ message: 'Upload thành công', data: { url: result.url, publicId: result.public_id } });
+      } catch (e) {
+        return res.status(500).json({ message: 'Không thể upload ảnh', error: e.message });
+      }
+    });
+  } catch (e) {
+    return res.status(500).json({ message: 'Lỗi server', error: e.message });
+  }
+});

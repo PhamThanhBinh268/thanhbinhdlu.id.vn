@@ -18,6 +18,14 @@ const categorySchema = new mongoose.Schema(
       type: String,
       default: "fas fa-box", // Font Awesome icon class
     },
+    slug: {
+      type: String,
+      trim: true,
+    },
+    hinhAnh: {
+      type: String,
+      trim: true,
+    },
     trangThai: {
       type: String,
       enum: ["active", "inactive"],

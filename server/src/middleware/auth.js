@@ -52,9 +52,13 @@ const authenticateToken = async (req, res, next) => {
 
 // Middleware kiểm tra quyền admin
 const requireAdmin = (req, res, next) => {
+  console.log("🔐 requireAdmin middleware - User:", req.user?.email, "Role:", req.user?.vaiTro);
+  
   if (req.user && req.user.vaiTro === "admin") {
+    console.log("✅ User is admin, proceeding...");
     next();
   } else {
+    console.log("❌ User is NOT admin or not authenticated");
     return res.status(403).json({
       message: "Bạn không có quyền truy cập tính năng này",
       code: "FORBIDDEN",

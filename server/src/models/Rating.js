@@ -15,7 +15,7 @@ const ratingSchema = new mongoose.Schema(
     giaoDich: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Transaction",
-      required: true,
+      required: false, // Optional - không phải lúc nào cũng có transaction
     },
     soSao: {
       type: Number,
@@ -39,15 +39,20 @@ const ratingSchema = new mongoose.Schema(
   }
 );
 
-// Đảm bảo mỗi giao dịch chỉ được đánh giá 1 lần bởi mỗi người
+// Đảm bảo mỗi giao dịch chỉ được đánh giá 1 lần bởi mỗi người (nếu có giaoDich)
 ratingSchema.index(
   {
     tuNguoiDung: 1,
     giaoDich: 1,
   },
-  { unique: true }
+  { 
+    unique: true,
+    partialFilterExpression: { giaoDich: { $exists: true } } // Chỉ áp dụng khi có giaoDich
+  }
 );
 
+// Index cho đánh giá người bán (không cần giaoDich)
+ratingSchema.index({ denNguoiDung: 1, tuNguoiDung: 1 });
 ratingSchema.index({ denNguoiDung: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Rating", ratingSchema);

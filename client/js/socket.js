@@ -8,6 +8,8 @@ class SocketManager {
     this.isConnected = false;
     this.currentConversation = null;
     this.messageCallbacks = [];
+    this.typingCallbacks = [];
+    this.sentCallbacks = [];
   }
 
   // Kết nối Socket.IO
@@ -18,12 +20,12 @@ class SocketManager {
 
     const token = AuthManager.getToken();
     if (!token) {
-      console.log("No token found, cannot connect to socket");
       return null;
     }
 
     try {
-      this.socket = io("http://localhost:8080", {
+      const origin = (window.location && window.location.origin) || 'http://localhost:8080';
+      this.socket = io(origin, {
         auth: {
           token: token,
         },
@@ -42,12 +44,10 @@ class SocketManager {
     if (!this.socket) return;
 
     this.socket.on("connect", () => {
-      console.log("Connected to server");
       this.isConnected = true;
     });
 
     this.socket.on("disconnect", () => {
-      console.log("Disconnected from server");
       this.isConnected = false;
     });
 
@@ -55,22 +55,49 @@ class SocketManager {
       console.error("Connection error:", error);
     });
 
-    this.socket.on("newMessage", (message) => {
-      this.handleNewMessage(message);
+    // Server emits snake_case events
+    // Cập nhật bài đăng (ví dụ: admin chỉnh sửa tags giảm giá/nổi bật)
+    this.socket.on('post_updated', (payload) => {
+      try {
+        // Phát tiếp một CustomEvent để các trang như shop/index có thể tự refresh
+        window.dispatchEvent(new CustomEvent('post:updated', { detail: payload }));
+      } catch (e) {
+      }
     });
 
-    this.socket.on("userOnline", (userId) => {
-      this.updateUserStatus(userId, true);
+    this.socket.on("new_message", (payload) => {
+      // payload: { message, fromUser }
+      const msg = payload?.message || payload;
+      try { } catch(_) {}
+      this.handleNewMessage(msg);
     });
 
-    this.socket.on("userOffline", (userId) => {
-      this.updateUserStatus(userId, false);
+    // When server confirms message saved for sender: forward to sent callbacks (UI layer will dedupe).
+    this.socket.on("message_sent", (payload) => {
+      const msg = payload?.message || payload;
+      try { } catch(_) {}
+      this.sentCallbacks.forEach(cb => { try { cb(msg, payload?.tempId); } catch(_) {} });
+    });
+
+    this.socket.on("user_status", (data) => {
+      const { userId, status } = data || {};
+      if (userId) this.updateUserStatus(userId, status === 'online');
+    });
+
+    this.socket.on('user_typing', (data) => {
+      this.typingCallbacks.forEach(cb => {
+        try { cb({ userId: data?.userId, typing: true, userName: data?.userName }); } catch(_) {}
+      });
+    });
+    this.socket.on('user_stop_typing', (data) => {
+      this.typingCallbacks.forEach(cb => {
+        try { cb({ userId: data?.userId, typing: false }); } catch(_) {}
+      });
     });
   }
 
   // Xử lý tin nhắn mới
   handleNewMessage(message) {
-    console.log("New message received:", message);
 
     // Gọi tất cả callbacks đã đăng ký
     this.messageCallbacks.forEach((callback) => {
@@ -81,14 +108,7 @@ class SocketManager {
       }
     });
 
-    // Cập nhật UI nếu đang trong conversation
-    if (
-      this.currentConversation &&
-      (message.nguoiGui._id === this.currentConversation ||
-        message.nguoiNhan._id === this.currentConversation)
-    ) {
-      this.displayMessage(message);
-    }
+    // Do not render here; page-level code (messages.js) will handle DOM updates via registered callbacks
 
     // Hiển thị notification nếu không phải tin nhắn từ user hiện tại
     const currentUser = AuthManager.getUser();
@@ -109,26 +129,40 @@ class SocketManager {
     );
   }
 
+  // Đăng ký callback cho trạng thái đang nhập
+  onTypingStatus(callback) {
+    this.typingCallbacks.push(callback);
+  }
+  offTypingStatus(callback) {
+    this.typingCallbacks = this.typingCallbacks.filter(cb => cb !== callback);
+  }
+
+  // Đăng ký callback cho sự kiện message_sent (tin đã lưu thành công)
+  onMessageSent(callback) {
+    this.sentCallbacks.push(callback);
+  }
+  offMessageSent(callback) {
+    this.sentCallbacks = this.sentCallbacks.filter(cb => cb !== callback);
+  }
+
   // Gửi tin nhắn
-  sendMessage(receiverId, content, type = "text") {
+  sendMessage(receiverId, content, type = "text", postId = null) {
     if (!this.socket || !this.isConnected) {
       throw new Error("Socket not connected");
     }
 
     const messageData = {
-      nguoiNhan: receiverId,
-      noiDung: content,
-      loaiTinNhan: type,
+      receiverId,
+      content,
+      type,
+      postId,
+      tempId: Math.random().toString(36).slice(2)
     };
 
     return new Promise((resolve, reject) => {
-      this.socket.emit("sendMessage", messageData, (response) => {
-        if (response.success) {
-          resolve(response.message);
-        } else {
-          reject(new Error(response.message));
-        }
-      });
+      this.socket.emit("send_message", messageData);
+      // Optimistic resolve; server also echoes message via new_message
+      resolve();
     });
   }
 
@@ -136,7 +170,12 @@ class SocketManager {
   joinConversation(userId) {
     if (!this.socket || !this.isConnected) return;
 
+    // Leave previous room (if any)
+    if (this.currentConversation) {
+      this.socket.emit("leaveConversation", this.currentConversation);
+    }
     this.currentConversation = userId;
+    // Use per-user room as server does (user_<id>) for delivery alignment
     this.socket.emit("joinConversation", userId);
   }
 
@@ -152,9 +191,11 @@ class SocketManager {
 
   // Cập nhật trạng thái online/offline của user
   updateUserStatus(userId, isOnline) {
-    const statusElements = document.querySelectorAll(
-      `[data-user-id="${userId}"] .user-status`
-    );
+    // Update any element that has exact id or data-user-id reference
+    const statusElements = [
+      ...document.querySelectorAll(`[data-user-id="${userId}"] .user-status`),
+      ...document.querySelectorAll(`#currentUserStatus[data-user-id="${userId}"]`)
+    ];
     statusElements.forEach((element) => {
       element.classList.toggle("online", isOnline);
       element.classList.toggle("offline", !isOnline);
@@ -245,8 +286,8 @@ class SocketManager {
   // Cập nhật badge tin nhắn chưa đọc
   async updateUnreadMessagesBadge() {
     try {
-      const response = await ApiService.get("/messages/unread-count");
-      const count = response.data.count;
+      const response = await ApiService.get("/messages/unread/count");
+      const count = response.unreadCount ?? response.data?.unreadCount ?? 0;
 
       const badge = document.querySelector(".messages-badge");
       if (badge) {

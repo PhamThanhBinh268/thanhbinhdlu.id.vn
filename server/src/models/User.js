@@ -71,6 +71,18 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: [500, "Giới thiệu không được quá 500 ký tự"],
     },
+    daXacMinhNguoiBan: {
+      type: Boolean,
+      default: false,
+    },
+    vipStatus: {
+      type: String,
+      enum: ["none", "basic", "professional", "vip"],
+      default: "none",
+    },
+    vipExpiry: {
+      type: Date,
+    },
     lienKetMangXaHoi: {
       facebook: {
         type: String,

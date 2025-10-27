@@ -19,8 +19,7 @@ document.addEventListener("DOMContentLoaded", function () {
 let currentConversationId = null;
 let currentChatUser = null;
 let conversations = [];
-let socketManager = null;
-let chatUI = null;
+const renderedMessageIds = new Set();
 
 async function initializeMessagesPage() {
   // Setup Socket.IO connection
@@ -35,23 +34,59 @@ async function initializeMessagesPage() {
   // Check if user specified in URL
   const targetUserId = Utils.getQueryParam("user");
   if (targetUserId) {
+    localStorage.setItem('messages:lastUserId', targetUserId);
     await startOrFindConversation(targetUserId);
+  } else {
+    // fallback: open last user if exists
+    const lastUserId = localStorage.getItem('messages:lastUserId');
+    if (lastUserId) {
+      await startOrFindConversation(lastUserId);
+    }
   }
 }
 
 function setupSocketConnection() {
-  // Initialize socket manager
-  socketManager = new SocketManager();
-  socketManager.connect();
+  // Reuse global socket if available to avoid duplicate connections
+  if (window.socketManager) {
+    socketManager = window.socketManager;
+    if (!socketManager.isConnected) socketManager.connect();
+  } else {
+    socketManager = new SocketManager();
+    socketManager.connect();
+    window.socketManager = socketManager;
+  }
 
-  // Initialize chat UI
-  chatUI = new ChatUI(socketManager);
+  // Initialize or reuse Chat UI
+  if (window.chatUI) {
+    chatUI = window.chatUI;
+  } else {
+    chatUI = new ChatUI(socketManager);
+    window.chatUI = chatUI;
+  }
 
-  // Listen for new messages
-  socketManager.onMessage((message) => {
+  // Always (re)bind a fresh messages-page handler to avoid stale closures
+  if (window._messagesOnMessageHandler) {
+    try { socketManager.offMessage(window._messagesOnMessageHandler); } catch(_) {}
+  }
+  window._messagesOnMessageHandler = (message) => {
     handleNewMessage(message);
-    updateConversationsList();
-  });
+    // Refresh conversation list to update last message and unread badge
+    loadConversations();
+  };
+  socketManager.onMessage(window._messagesOnMessageHandler);
+
+  // Also listen for 'message_sent' to optimistically render own message
+  if (window._messagesOnSentHandler) {
+    try { socketManager.offMessageSent(window._messagesOnSentHandler); } catch(_) {}
+  }
+  window._messagesOnSentHandler = (message) => {
+    const currentUser = AuthManager.getUser();
+    const senderId = typeof message.nguoiGui === 'string' ? message.nguoiGui : message.nguoiGui?._id;
+    if (!currentChatUser || senderId !== currentUser._id) return;
+    // Forward to same flow; de-dup will block duplicates if new_message arrives
+    handleNewMessage(message);
+  };
+  socketManager.onMessageSent(window._messagesOnSentHandler);
 }
 
 function setupEventListeners() {
@@ -91,19 +126,32 @@ function setupEventListeners() {
   // Auto-resize message input
   const messageInput = document.getElementById("messageInput");
   if (messageInput) {
+    let typingTimer;
+    const TYPING_DEBOUNCE = 1200;
     messageInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        messageForm.dispatchEvent(new Event("submit"));
+        const form = document.getElementById('messageForm');
+        form && form.dispatchEvent(new Event('submit'));
       }
+      // Emit typing start
+      if (socketManager && currentChatUser) {
+        try { socketManager.socket.emit('typing_start', { receiverId: currentChatUser._id }); } catch(_) {}
+      }
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => {
+        if (socketManager && currentChatUser) {
+          try { socketManager.socket.emit('typing_stop', { receiverId: currentChatUser._id }); } catch(_) {}
+        }
+      }, TYPING_DEBOUNCE);
     });
   }
 }
 
 async function loadConversations() {
   try {
-    const response = await ApiService.get("/messages/conversations");
-    conversations = response.data;
+  const response = await ApiService.get("/messages/conversations");
+  conversations = response.conversations || response.data || [];
 
     displayConversations(conversations);
   } catch (error) {
@@ -141,14 +189,11 @@ function displayConversations(conversations) {
 
   let html = "";
   conversations.forEach((conversation) => {
-    const otherUser = conversation.nguoiThamGia.find(
-      (user) => user._id !== AuthManager.getUser()._id
-    );
-
+    const otherUser = conversation.otherUser || conversation.nguoiThamGia?.find((u) => u._id !== AuthManager.getUser()._id);
     if (!otherUser) return;
 
-    const lastMessage = conversation.tinNhanCuoi;
-    const unreadCount = conversation.soTinNhanChuaDoc || 0;
+    const lastMessage = conversation.lastMessage || conversation.tinNhanCuoi;
+    const unreadCount = conversation.unreadCount || conversation.soTinNhanChuaDoc || 0;
     const isActive = conversation._id === currentConversationId ? "active" : "";
 
     html += `
@@ -185,7 +230,7 @@ function displayConversations(conversations) {
                     ${
                       lastMessage
                         ? `<small class="text-muted">${Utils.formatRelativeTime(
-                            lastMessage.thoiGianGui
+                            lastMessage.createdAt || lastMessage.thoiGianGui
                           )}</small>`
                         : ""
                     }
@@ -194,6 +239,22 @@ function displayConversations(conversations) {
         `;
   });
 
+  // Typing indicator
+  const typingEl = document.createElement('div');
+  typingEl.id = 'typingIndicator';
+  typingEl.className = 'small text-light mt-1';
+  typingEl.style.display = 'none';
+  const header = document.getElementById('chatHeader');
+  if (header) header.appendChild(typingEl);
+  if (socketManager && !socketManager._typingListenerBound) {
+    socketManager.onTypingStatus(({ userId, typing }) => {
+      if (!currentChatUser || userId !== currentChatUser._id) return;
+      typingEl.textContent = typing ? 'Đang nhập…' : '';
+      typingEl.style.display = typing ? 'block' : 'none';
+    });
+    socketManager._typingListenerBound = true;
+  }
+
   conversationsList.innerHTML = html;
 
   // Add click listeners
@@ -201,6 +262,8 @@ function displayConversations(conversations) {
     item.addEventListener("click", function () {
       const conversationId = this.getAttribute("data-conversation-id");
       const userId = this.getAttribute("data-user-id");
+      // Reset de-dup cache for new thread
+      try { renderedMessageIds.clear(); } catch(_) {}
       openConversation(conversationId, userId);
     });
   });
@@ -210,18 +273,28 @@ async function openConversation(conversationId, userId) {
   try {
     // Update UI state
     currentConversationId = conversationId;
+    if (userId) {
+      try { localStorage.setItem('messages:lastUserId', userId); } catch(_) {}
+    }
 
     // Update active conversation in sidebar
     document.querySelectorAll(".conversation-item").forEach((item) => {
       item.classList.remove("active");
     });
-    document
-      .querySelector(`[data-conversation-id="${conversationId}"]`)
-      ?.classList.add("active");
+    if (conversationId) {
+      document
+        .querySelector(`[data-conversation-id="${conversationId}"]`)
+        ?.classList.add("active");
+    } else if (userId) {
+      // find the conversation item by user-id if id is not known yet
+      document
+        .querySelector(`[data-user-id="${userId}"]`)
+        ?.classList.add("active");
+    }
 
     // Get user info
-    const userResponse = await ApiService.get(`/users/${userId}`);
-    currentChatUser = userResponse.data;
+  const userResponse = await ApiService.get(`/users/${userId}`);
+  currentChatUser = userResponse.user || userResponse.data;
 
     // Update chat header
     updateChatHeader(currentChatUser);
@@ -235,14 +308,21 @@ async function openConversation(conversationId, userId) {
     // Join conversation room
     if (socketManager) {
       socketManager.joinConversation(userId);
-      chatUI.currentChatUserId = userId;
+        if (chatUI) chatUI.currentChatUserId = userId;
     }
 
+    // Reflect current chat user in URL (no reload)
+    try {
+      const url = new URL(window.location);
+      url.searchParams.set('user', userId);
+      window.history.replaceState({}, '', url);
+    } catch(_) {}
+
     // Load message history
-    await loadMessageHistory(conversationId);
+  await loadMessageHistory(userId);
 
     // Mark messages as read
-    await markMessagesAsRead(conversationId);
+  await markMessagesAsRead(userId);
 
     // Hide sidebar on mobile after selecting conversation
     if (window.innerWidth < 768) {
@@ -257,9 +337,10 @@ async function openConversation(conversationId, userId) {
 async function startOrFindConversation(userId) {
   try {
     // Try to find existing conversation
-    let conversation = conversations.find((conv) =>
-      conv.nguoiThamGia.some((user) => user._id === userId)
-    );
+    let conversation = conversations.find((conv) => {
+      const other = conv.otherUser || conv.nguoiThamGia?.find((u) => u._id !== AuthManager.getUser()._id);
+      return other && other._id === userId;
+    });
 
     if (conversation) {
       // Open existing conversation
@@ -267,7 +348,11 @@ async function startOrFindConversation(userId) {
     } else {
       // Start new conversation
       const userResponse = await ApiService.get(`/users/${userId}`);
-      currentChatUser = userResponse.data;
+      currentChatUser = userResponse.user || userResponse.data;
+
+      if (!currentChatUser || !currentChatUser._id) {
+        throw new Error("Không lấy được thông tin người dùng");
+      }
 
       updateChatHeader(currentChatUser);
 
@@ -295,6 +380,7 @@ async function startOrFindConversation(userId) {
                 `;
       }
     }
+    try { localStorage.setItem('messages:lastUserId', userId); } catch(_) {}
   } catch (error) {
     console.error("Error starting conversation:", error);
     Utils.showToast("Không thể bắt đầu cuộc trò chuyện", "error");
@@ -302,25 +388,24 @@ async function startOrFindConversation(userId) {
 }
 
 function updateChatHeader(user) {
+  if (!user) return;
   const currentChatUser = document.getElementById("currentChatUser");
   const currentUserStatus = document.getElementById("currentUserStatus");
 
   if (currentChatUser) {
-    currentChatUser.textContent = user.hoTen;
+    currentChatUser.textContent = user.hoTen || "Người dùng";
   }
 
-  if (currentUserStatus) {
+  if (currentUserStatus && user._id) {
     currentUserStatus.setAttribute("data-user-id", user._id);
     // Status will be updated by socket events
   }
 }
 
-async function loadMessageHistory(conversationId) {
+async function loadMessageHistory(otherUserId) {
   try {
-    const response = await ApiService.get(
-      `/messages/conversation/${conversationId}`
-    );
-    const messages = response.data;
+    const response = await ApiService.get(`/messages/${otherUserId}`);
+    const messages = response.messages || response.data || [];
 
     displayMessages(messages);
     scrollToBottom();
@@ -349,8 +434,10 @@ function displayMessages(messages) {
   const currentUser = AuthManager.getUser();
 
   messages.forEach((message) => {
-    const isOwnMessage = message.nguoiGui._id === currentUser._id;
+    const senderId = typeof message.nguoiGui === 'string' ? message.nguoiGui : message.nguoiGui?._id;
+    const isOwnMessage = senderId === currentUser._id;
     html += createMessageHTML(message, isOwnMessage);
+    if (message._id) renderedMessageIds.add(message._id);
   });
 
   chatMessages.innerHTML = html;
@@ -417,7 +504,7 @@ function createMessageHTML(message, isOwnMessage) {
             <div class="message-content">
                 ${messageContent}
                 <div class="message-time">
-                    ${Utils.formatDateTime(message.thoiGianGui)}
+          ${Utils.formatDateTime(message.thoiGianGui || message.createdAt)}
                 </div>
             </div>
         </div>
@@ -425,19 +512,41 @@ function createMessageHTML(message, isOwnMessage) {
 }
 
 function handleNewMessage(message) {
+  try { } catch(_) {}
   // If message is for current conversation, display it
   if (
     currentChatUser &&
-    (message.nguoiGui._id === currentChatUser._id ||
-      message.nguoiNhan._id === currentChatUser._id)
+    ((message.nguoiGui?._id || message.nguoiGui) === currentChatUser._id ||
+      (message.nguoiNhan?._id || message.nguoiNhan) === currentChatUser._id)
   ) {
     const chatMessages = document.getElementById("chatMessages");
-    if (chatMessages && !chatMessages.innerHTML.includes("text-center")) {
+    if (chatMessages) {
+      // Clear empty-state if present
+      if (chatMessages.innerHTML.includes("text-center")) {
+        chatMessages.innerHTML = "";
+      }
+      if (message._id && renderedMessageIds.has(message._id)) {
+        return; // already rendered
+      }
       const currentUser = AuthManager.getUser();
-      const isOwnMessage = message.nguoiGui._id === currentUser._id;
-
+      const senderId = typeof message.nguoiGui === 'string' ? message.nguoiGui : message.nguoiGui?._id;
+      const isOwnMessage = senderId === currentUser._id;
       chatMessages.innerHTML += createMessageHTML(message, isOwnMessage);
+      if (message._id) renderedMessageIds.add(message._id);
       scrollToBottom();
+    }
+  }
+
+  // If chat user not set yet but URL targets this conversation, open it to fetch full history
+  if (!currentChatUser) {
+    const targetUserId = Utils.getQueryParam("user");
+    const currentUser = AuthManager.getUser();
+    const senderId = (message.nguoiGui?._id || message.nguoiGui);
+    const receiverId = (message.nguoiNhan?._id || message.nguoiNhan);
+    const otherUserId = senderId === currentUser._id ? receiverId : senderId;
+    if (targetUserId && otherUserId === targetUserId) {
+      openConversation(null, targetUserId);
+      return;
     }
   }
 
@@ -451,7 +560,11 @@ async function handleSendMessage(e) {
   const messageInput = document.getElementById("messageInput");
   const content = messageInput.value.trim();
 
-  if (!content || !currentChatUser) return;
+  if (!content) return;
+  if (!currentChatUser || !currentChatUser._id) {
+    Utils.showToast("Chưa chọn cuộc trò chuyện", "warning");
+    return;
+  }
 
   try {
     const sendBtn = document.getElementById("sendMessageBtn");
@@ -493,13 +606,13 @@ async function handleFileUpload(event) {
     Utils.showToast("Đang tải file lên...", "info");
 
     // Upload file
-    const uploadResponse = await ApiService.uploadFile("/upload", formData);
+  const uploadResponse = await ApiService.uploadFile("/cloudinary/upload", formData);
 
     // Send image message via Socket.IO
     if (socketManager) {
       await socketManager.sendMessage(
         currentChatUser._id,
-        uploadResponse.data.url,
+        (uploadResponse.data?.url || uploadResponse.data?.data?.url),
         "image"
       );
     }
@@ -523,19 +636,27 @@ function handleSendOffer() {
   }
 }
 
-async function markMessagesAsRead(conversationId) {
+async function markMessagesAsRead(otherUserId) {
   try {
-    await ApiService.patch(`/messages/conversation/${conversationId}/read`);
+    await ApiService.patch(`/messages/mark-read/${otherUserId}`);
 
     // Update UI - remove unread badges
     const conversationItem = document.querySelector(
-      `[data-conversation-id="${conversationId}"]`
+      `[data-conversation-id="${currentConversationId}"]`
     );
     if (conversationItem) {
       const badge = conversationItem.querySelector(".badge");
       if (badge) {
         badge.remove();
       }
+    }
+
+    // Refresh global unread badge (header)
+    if (window.socketManager && socketManager.updateUnreadMessagesBadge) {
+      socketManager.updateUnreadMessagesBadge();
+    } else if (window.dispatchEvent) {
+      // Trigger layout to refresh (in case it has a refresher)
+      window.dispatchEvent(new CustomEvent('user:updated', { detail: { user: AuthManager.getUser() } }));
     }
   } catch (error) {
     console.error("Error marking messages as read:", error);

@@ -104,6 +104,61 @@ router.get("/conversations", authenticateToken, async (req, res) => {
   }
 });
 
+// NOTE: Đăng ký các route cụ thể trước route tham số '/:otherUserId' để tránh bị "nuốt"
+// GET /api/messages/unread/count - Đếm số tin nhắn chưa đọc (đặt TRƯỚC '/:otherUserId')
+router.get("/unread/count", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const unreadCount = await Message.countDocuments({
+      nguoiNhan: userId,
+      trangThai: { $ne: "read" },
+    });
+
+    res.json({
+      message: "Lấy số tin nhắn chưa đọc thành công",
+      unreadCount,
+    });
+  } catch (error) {
+    console.error("Get unread count error:", error);
+    res.status(500).json({
+      message: "Lỗi server khi đếm tin nhắn chưa đọc",
+      error: error.message,
+    });
+  }
+});
+
+// PATCH /api/messages/mark-read/:otherUserId - Đánh dấu đã đọc (đặt TRƯỚC '/:otherUserId')
+router.patch("/mark-read/:otherUserId", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const otherUserId = req.params.otherUserId;
+
+    const result = await Message.updateMany(
+      {
+        nguoiGui: otherUserId,
+        nguoiNhan: userId,
+        trangThai: { $ne: "read" },
+      },
+      {
+        trangThai: "read",
+        thoiGianDoc: new Date(),
+      }
+    );
+
+    res.json({
+      message: "Đánh dấu tin nhắn đã đọc thành công",
+      readCount: result.modifiedCount,
+    });
+  } catch (error) {
+    console.error("Mark messages read error:", error);
+    res.status(500).json({
+      message: "Lỗi server khi đánh dấu tin nhắn đã đọc",
+      error: error.message,
+    });
+  }
+});
+
 // GET /api/messages/:otherUserId - Lấy tin nhắn với user khác
 router.get("/:otherUserId", authenticateToken, async (req, res) => {
   try {

@@ -19,6 +19,16 @@ const postSchema = new mongoose.Schema(
       required: [true, "Giá là bắt buộc"],
       min: [0, "Giá không được âm"],
     },
+    giaGoc: {
+      type: Number, // Giá gốc (trước khi giảm) - người bán tự set
+      min: [0, "Giá gốc không được âm"],
+    },
+    tyLeGiamGia: {
+      type: Number, // % giảm giá (0-100) - người bán tự set
+      min: [0, "Tỷ lệ giảm giá không được âm"],
+      max: [100, "Tỷ lệ giảm giá không được quá 100%"],
+      default: 0,
+    },
     loaiGia: {
       type: String,
       enum: ["ban", "trao-doi", "cho-mien-phi"],
@@ -80,6 +90,48 @@ const postSchema = new mongoose.Schema(
         type: String,
         trim: true,
         lowercase: true,
+      },
+    ],
+    // Tính năng dịch vụ trả phí
+    tinhNangDichVu: {
+      noiBat: { // Admin đánh dấu nổi bật (featured)
+        type: Boolean,
+        default: false,
+      },
+      tinVip: { // Người bán mua gói VIP
+        type: Boolean,
+        default: false,
+        expireAt: Date, // Thời gian hết hạn VIP
+      },
+      dayTin: { // Người bán mua gói đẩy tin (boost)
+        type: Boolean,
+        default: false,
+        expireAt: Date,
+        boostCount: { type: Number, default: 0 }, // Số lần đẩy còn lại
+      },
+    },
+    danhGia: [
+      {
+        nguoiDanhGia: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        diemDanhGia: {
+          type: Number,
+          required: true,
+          min: 1,
+          max: 5,
+        },
+        binhLuan: {
+          type: String,
+          trim: true,
+          maxlength: 500,
+        },
+        ngayDanhGia: {
+          type: Date,
+          default: Date.now,
+        },
       },
     ],
   },

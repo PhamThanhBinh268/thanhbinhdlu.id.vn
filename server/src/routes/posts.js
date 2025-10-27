@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const mongoose = require("mongoose");
 const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
@@ -116,6 +116,250 @@ router.get("/", optionalAuth, async (req, res) => {
   }
 });
 
+// GET /api/posts/admin - Danh sách bài đăng cho Admin (mọi trạng thái)
+router.get("/admin", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    console.log("🔧 GET /api/posts/admin - Admin posts request");
+    console.log("👤 User:", req.user?.email, "Role:", req.user?.vaiTro);
+    console.log("📊 Query params:", req.query);
+    
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      danhMuc,
+      nguoiDang,
+      trangThai, // pending | approved | rejected | sold | hidden
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = req.query;
+
+    const filter = {};
+
+    // Tìm kiếm theo từ khóa (bỏ qua nếu là 'undefined' string)
+    if (search && search !== 'undefined' && search.trim()) {
+      filter.$or = [
+        { tieuDe: { $regex: search, $options: "i" } },
+        { moTa: { $regex: search, $options: "i" } },
+        { tags: { $in: [new RegExp(search, "i")] } },
+      ];
+    }
+    if (danhMuc && danhMuc !== 'undefined') filter.danhMuc = danhMuc;
+    if (nguoiDang && nguoiDang !== 'undefined') filter.nguoiDang = nguoiDang;
+    if (trangThai && trangThai !== 'undefined') filter.trangThai = trangThai;
+
+    console.log("🎯 Final filter:", filter);
+
+    const sort = { [sortBy]: sortOrder === "asc" ? 1 : -1 };
+
+    const [items, total] = await Promise.all([
+      Post.find(filter)
+        .populate("danhMuc", "tenDanhMuc icon")
+        .populate("nguoiDang", "hoTen email avatar")
+        .sort(sort)
+        .limit(Number(limit))
+        .skip((Number(page) - 1) * Number(limit)),
+      Post.countDocuments(filter),
+    ]);
+
+    res.json({
+      message: "Lấy danh sách bài đăng (admin) thành công",
+      data: items,
+      pagination: {
+        current: Number(page),
+        pages: Math.ceil(total / Number(limit)),
+        total,
+        limit: Number(limit),
+      },
+    });
+  } catch (error) {
+    console.error("Admin get posts error:", error);
+    res.status(500).json({
+      message: "Lỗi server khi lấy danh sách bài đăng (admin)",
+      error: error.message,
+    });
+  }
+});
+
+// GET /api/posts/search - Search bài đăng (alias cho GET /)
+router.get("/search", optionalAuth, async (req, res) => {
+  try {
+    console.log("🔍 GET /api/posts/search - Search request");
+    console.log("📊 Query params:", req.query);
+
+    const {
+      page = 1,
+      limit = 12,
+      search,
+      category,
+      danhMuc,
+      minPrice,
+      maxPrice,
+      loaiGia,
+      tinhTrang,
+      condition,
+      diaDiem,
+      location,
+      nguoiDang,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = req.query;
+
+    // Xây dựng query filter
+    const filter = { trangThai: "approved" };
+    console.log("🎯 Base filter:", filter);
+
+    // Lọc theo người đăng
+    if (nguoiDang) {
+      filter.nguoiDang = nguoiDang;
+      console.log("👤 Added user filter:", nguoiDang);
+    }
+
+    // Tìm kiếm theo từ khóa
+    if (search) {
+      filter.$or = [
+        { tieuDe: { $regex: search, $options: "i" } },
+        { moTa: { $regex: search, $options: "i" } },
+        { tags: { $in: [new RegExp(search, "i")] } }
+      ];
+      console.log("🔎 Added search filter for:", search);
+    }
+
+    // Lọc theo danh mục (hỗ trợ cả 'category' và 'danhMuc')
+    const categoryId = category || danhMuc;
+    if (categoryId) {
+      filter.danhMuc = categoryId;
+      console.log("📂 Added category filter:", categoryId);
+    }
+
+    // Lọc theo giá
+    if (minPrice || maxPrice) {
+      filter.gia = {};
+      if (minPrice) filter.gia.$gte = parseInt(minPrice);
+      if (maxPrice) filter.gia.$lte = parseInt(maxPrice);
+      console.log("💰 Added price filter:", filter.gia);
+    }
+
+    // Lọc theo loại giá
+    if (loaiGia) {
+      filter.loaiGia = loaiGia;
+      console.log("🏷️ Added price type filter:", loaiGia);
+    }
+
+    // Lọc theo tình trạng (hỗ trợ cả 'condition' và 'tinhTrang')
+    const conditionValue = condition || tinhTrang;
+    if (conditionValue) {
+      filter.tinhTrang = conditionValue;
+      console.log("⚙️ Added condition filter:", conditionValue);
+    }
+
+    // Lọc theo địa điểm (hỗ trợ cả 'location' và 'diaDiem')
+    const locationValue = location || diaDiem;
+    if (locationValue) {
+      filter.diaDiem = { $regex: locationValue, $options: "i" };
+      console.log("📍 Added location filter:", locationValue);
+    }
+
+    console.log("🎯 Final filter:", filter);
+
+    // Xây dựng sort object (Strategy pattern dạng map)
+    const sortStrategies = {
+      newest: () => ({ createdAt: -1 }),
+      oldest: () => ({ createdAt: 1 }),
+      price_low: () => ({ gia: 1 }),
+      price_high: () => ({ gia: -1 }),
+      default: () => ({ [sortBy]: sortOrder === "asc" ? 1 : -1 }),
+    };
+    const resolveSort = sortStrategies[sortBy] || sortStrategies.default;
+    const sortObj = resolveSort();
+    console.log("📊 Sort order:", sortObj);
+
+    const posts = await Post.find(filter)
+      .populate("danhMuc", "tenDanhMuc icon")
+      .populate("nguoiDang", "hoTen avatar diemUyTin")
+      .sort(sortObj)
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Post.countDocuments(filter);
+    const totalPages = Math.ceil(total / limit);
+
+    console.log(`✅ Found ${posts.length} posts (${total} total)`);
+
+    res.json({
+      message: "Tìm kiếm bài đăng thành công",
+      data: {
+        posts,
+        totalPages,
+        currentPage: parseInt(page),
+        totalPosts: total,
+        limit: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error("❌ Search posts error:", error);
+    res.status(500).json({
+      message: "Lỗi server khi tìm kiếm bài đăng",
+      error: error.message,
+    });
+  }
+});
+
+// GET /api/posts/featured - Top sản phẩm nổi bật theo số và điểm đánh giá
+router.get("/featured", optionalAuth, async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+
+    // Chỉ lấy bài đăng đã duyệt, loại giá là 'ban' (không lấy trao đổi/cho miễn phí)
+    const match = { trangThai: "approved", loaiGia: "ban" };
+
+    const pipeline = [
+      { $match: match },
+      {
+        $addFields: {
+          ratingCount: { $size: { $ifNull: ["$danhGia", []] } },
+          avgRating: {
+            $cond: [
+              { $gt: [{ $size: { $ifNull: ["$danhGia", []] } }, 0] },
+              { $avg: "$danhGia.diemDanhGia" },
+              0,
+            ],
+          },
+          // Ưu tiên bài được admin đánh dấu nổi bật
+          isNoiBat: { $ifNull: ["$tinhNangDichVu.noiBat", false] }
+        },
+      },
+      {
+        $sort: {
+          isNoiBat: -1,        // Ưu tiên bài nổi bật lên đầu
+          ratingCount: -1,
+          avgRating: -1,
+          createdAt: -1,
+        },
+      },
+      { $limit: Number(limit) },
+    ];
+
+    let items = await Post.aggregate(pipeline);
+    // Populate references after aggregation
+    items = await Post.populate(items, [
+      { path: "danhMuc", select: "tenDanhMuc icon" },
+      { path: "nguoiDang", select: "hoTen avatar diemUyTin" },
+    ]);
+
+    res.json({
+      message: "Lấy sản phẩm nổi bật thành công",
+      data: { posts: items, total: items.length, limit: Number(limit) },
+    });
+  } catch (error) {
+    console.error("Get featured posts error:", error);
+    res.status(500).json({
+      message: "Lỗi server khi lấy sản phẩm nổi bật",
+      error: error.message,
+    });
+  }
+});
+
 // GET /api/posts/:id - Lấy chi tiết bài đăng
 router.get("/:id", optionalAuth, async (req, res) => {
   try {
@@ -178,17 +422,25 @@ router.post(
   handleValidation,
   async (req, res) => {
     try {
+      console.log("🚀 POST /api/posts - Received request");
+      console.log("📝 Request body:", req.body);
+      console.log("📁 Files:", req.files?.length || 0);
+      console.log("👤 User:", req.user?.id);
+
       const { tieuDe, moTa, gia, danhMuc, diaDiem, loaiGia, tinhTrang, tags } =
         req.body;
 
-      // Kiểm tra danh mục tồn tại
+      // Kiểm tra danh mục tồn tại  
+      console.log("🔍 Checking category:", danhMuc);
       const category = await Category.findById(danhMuc);
       if (!category) {
+        console.log("❌ Category not found:", danhMuc);
         return res.status(400).json({
           message: "Danh mục không tồn tại",
           code: "CATEGORY_NOT_FOUND",
         });
       }
+      console.log("✅ Category found:", category.tenDanhMuc);
 
       // Upload ảnh lên Cloudinary (sử dụng utils)
       let uploaded = [];
@@ -210,7 +462,8 @@ router.post(
       }
 
       // Tạo bài đăng
-      const post = new Post({
+      console.log("📝 Creating post with data:");
+      const postData = {
         tieuDe,
         moTa,
         gia: parseFloat(gia),
@@ -222,21 +475,30 @@ router.post(
         danhMuc,
         nguoiDang: req.user._id,
         diaDiem,
-        loaiGia: loaiGia || "ban",
+        loaiGia: loaiGia || "ban", 
         tinhTrang: tinhTrang || "tot",
+        // Mặc định chờ duyệt; nếu người tạo là admin thì tự duyệt
+        trangThai: req.user?.vaiTro === "admin" ? "approved" : "pending",
         tags: tags
           ? tags.split(",").map((tag) => tag.trim().toLowerCase())
           : [],
-      });
+      };
+      console.log("📊 Post data:", postData);
 
+      const post = new Post(postData);
+      console.log("💾 Saving post to MongoDB...");
       await post.save();
+      console.log("✅ Post saved successfully with ID:", post._id);
 
       // Populate để trả về đầy đủ thông tin
       await post.populate("danhMuc", "tenDanhMuc icon");
       await post.populate("nguoiDang", "hoTen avatar");
 
       res.status(201).json({
-        message: "Tạo bài đăng thành công. Bài đăng đang chờ duyệt.",
+        message:
+          post.trangThai === "approved"
+            ? "Tạo bài đăng thành công và đã được duyệt!"
+            : "Tạo bài đăng thành công, đang chờ duyệt",
         post,
       });
     } catch (error) {
@@ -273,12 +535,18 @@ router.put("/:id", authenticateToken, async (req, res) => {
       });
     }
 
-    const updateData = {};
-    const allowedFields = ["tieuDe", "moTa", "gia", "diaDiem", "tinhTrang"];
+  const updateData = {};
+  const allowedFields = ["tieuDe", "moTa", "gia", "diaDiem", "tinhTrang"];
 
     // Admin có thể cập nhật thêm các trường khác
     if (req.user.vaiTro === "admin") {
-      allowedFields.push("trangThai", "lyDoTuChoi");
+      // Cho phép admin cập nhật trạng thái, lý do từ chối và tags (để cấu hình discount/highlight)
+      allowedFields.push("trangThai", "lyDoTuChoi", "tags");
+      
+      // Admin có thể cập nhật tinhNangDichVu.noiBat (đánh dấu nổi bật)
+      if (req.body['tinhNangDichVu.noiBat'] !== undefined) {
+        updateData['tinhNangDichVu.noiBat'] = req.body['tinhNangDichVu.noiBat'];
+      }
     }
 
     for (const field of allowedFields) {
@@ -298,6 +566,25 @@ router.put("/:id", authenticateToken, async (req, res) => {
     })
       .populate("danhMuc", "tenDanhMuc icon")
       .populate("nguoiDang", "hoTen avatar");
+
+    // Phát sự kiện realtime khi admin cập nhật tags, trạng thái hoặc nổi bật
+    try {
+      const io = req.app && req.app.get && req.app.get('io');
+      if (io && (updateData.tags || updateData.trangThai || updateData.gia || updateData.tieuDe || updateData['tinhNangDichVu.noiBat'] !== undefined)) {
+        io.emit('post_updated', {
+          id: String(postId),
+          tags: updatedPost?.tags || [],
+          trangThai: updatedPost?.trangThai,
+          gia: updatedPost?.gia,
+          tieuDe: updatedPost?.tieuDe,
+          noiBat: updatedPost?.tinhNangDichVu?.noiBat || false
+        });
+        console.log('🔔 Socket event emitted: post_updated', { 
+          id: String(postId), 
+          noiBat: updatedPost?.tinhNangDichVu?.noiBat 
+        });
+      }
+    } catch (_) { /* noop */ }
 
     res.json({
       message: "Cập nhật bài đăng thành công",
@@ -452,6 +739,39 @@ router.get("/saved/me", authenticateToken, async (req, res) => {
       message: "Lỗi server khi lấy danh sách bài đăng đã lưu",
       error: error.message,
     });
+  }
+});
+
+// GET /api/posts/mine - Bài đăng của tôi (mọi trạng thái)
+router.get("/mine", authenticateToken, async (req, res) => {
+  try {
+    const { page = 1, limit = 12, trangThai } = req.query;
+    const filter = { nguoiDang: req.user._id };
+    if (trangThai) filter.trangThai = trangThai;
+
+    const [items, total] = await Promise.all([
+      Post.find(filter)
+        .populate("danhMuc", "tenDanhMuc icon")
+        .populate("nguoiDang", "hoTen avatar diemUyTin")
+        .sort({ createdAt: -1 })
+        .limit(Number(limit))
+        .skip((Number(page) - 1) * Number(limit)),
+      Post.countDocuments(filter),
+    ]);
+
+    res.json({
+      message: "Lấy bài đăng của tôi thành công",
+      data: items,
+      pagination: {
+        current: Number(page),
+        pages: Math.ceil(total / Number(limit)),
+        total,
+        limit: Number(limit),
+      },
+    });
+  } catch (e) {
+    console.error("Get my posts error:", e);
+    res.status(500).json({ message: "Lỗi server khi lấy bài đăng của tôi", error: e.message });
   }
 });
 
@@ -702,3 +1022,141 @@ router.patch(":id/images/reorder", authenticateToken, async (req, res) => {
       .json({ message: "Lỗi server khi sắp xếp ảnh", error: e.message });
   }
 });
+
+// ==================== RATING/REVIEW ENDPOINTS ====================
+
+// GET /api/posts/:id/ratings - Lấy danh sách đánh giá cho bài đăng
+router.get("/:id/ratings", async (req, res) => {
+  try {
+    const postId = req.params.id;
+    
+    const post = await Post.findById(postId).populate({
+      path: "danhGia.nguoiDanhGia",
+      select: "hoTen avatar"
+    });
+    
+    if (!post) {
+      return res.status(404).json({
+        message: "Không tìm thấy bài đăng",
+        code: "POST_NOT_FOUND"
+      });
+    }
+
+    const formattedRatings = (post.danhGia || []).map(rating => ({
+      _id: rating._id,
+      nguoiDanhGia: rating.nguoiDanhGia,
+      diemDanhGia: rating.diemDanhGia,
+      binhLuan: rating.binhLuan,
+      ngayDanhGia: rating.ngayDanhGia
+    }));
+
+    res.json({
+      message: "Lấy danh sách đánh giá thành công",
+      data: formattedRatings
+    });
+    
+  } catch (error) {
+    console.error("Get post ratings error:", error);
+    res.status(500).json({
+      message: "Lỗi server khi lấy đánh giá",
+      error: error.message
+    });
+  }
+});
+
+// POST /api/posts/:id/ratings - Tạo đánh giá cho sản phẩm
+router.post("/:id/ratings", authenticateToken, async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const { diemDanhGia, binhLuan } = req.body;
+    const userId = req.user._id;
+
+    if (!diemDanhGia || diemDanhGia < 1 || diemDanhGia > 5) {
+      return res.status(400).json({
+        message: "Điểm đánh giá phải từ 1 đến 5 sao",
+        code: "INVALID_RATING"
+      });
+    }
+
+    const post = await Post.findById(postId).populate("nguoiDang");
+    if (!post) {
+      return res.status(404).json({
+        message: "Không tìm thấy bài đăng",
+        code: "POST_NOT_FOUND"
+      });
+    }
+
+    // Kiểm tra post có người đăng không
+    if (!post.nguoiDang) {
+      return res.status(400).json({
+        message: "Bài đăng này không hợp lệ (không có người đăng)",
+        code: "INVALID_POST"
+      });
+    }
+
+    if (post.nguoiDang._id.toString() === userId.toString()) {
+      return res.status(400).json({
+        message: "Không thể đánh giá bài đăng của chính mình",
+        code: "SELF_RATING_NOT_ALLOWED"
+      });
+    }
+
+    if (!post.danhGia) {
+      post.danhGia = [];
+    }
+
+    const existingReviewIndex = post.danhGia.findIndex(
+      r => r.nguoiDanhGia && r.nguoiDanhGia.toString() === userId.toString()
+    );
+
+    const User = require("../models/User");
+    const user = await User.findById(userId).select("hoTen avatar");
+
+    if (existingReviewIndex !== -1) {
+      post.danhGia[existingReviewIndex].diemDanhGia = diemDanhGia;
+      post.danhGia[existingReviewIndex].binhLuan = binhLuan || "";
+      post.danhGia[existingReviewIndex].ngayDanhGia = new Date();
+    } else {
+      post.danhGia.push({
+        nguoiDanhGia: userId,
+        diemDanhGia: diemDanhGia,
+        binhLuan: binhLuan || "",
+        ngayDanhGia: new Date()
+      });
+    }
+
+    await post.save();
+
+    // Cập nhật điểm uy tín người bán (nếu có)
+    if (post.nguoiDang && post.nguoiDang._id) {
+      const seller = await User.findById(post.nguoiDang._id);
+      if (seller) {
+        await seller.calculateRating();
+      }
+    }
+
+    const reviewIndex = existingReviewIndex !== -1 ? existingReviewIndex : post.danhGia.length - 1;
+    const review = post.danhGia[reviewIndex];
+
+    res.status(201).json({
+      message: "Đánh giá thành công",
+      data: {
+        _id: review._id,
+        nguoiDanhGia: user,
+        diemDanhGia: review.diemDanhGia,
+        binhLuan: review.binhLuan,
+        ngayDanhGia: review.ngayDanhGia
+      }
+    });
+
+  } catch (error) {
+    console.error("Create post rating error:", error);
+    res.status(500).json({
+      message: "Lỗi server khi tạo đánh giá",
+      error: error.message
+    });
+  }
+});
+
+module.exports = router;
+

@@ -51,6 +51,176 @@ router.get("/", authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
+// =========================================
+// SPECIFIC ROUTES FIRST (before /:id)
+// =========================================
+
+// GET /api/users/:id/posts - Lấy bài đăng của user
+router.get("/:id/posts", async (req, res) => {
+  try {
+    const { page = 1, limit = 12, trangThai } = req.query;
+    const userId = req.params.id;
+
+    const query = { nguoiDang: userId };
+
+    if (trangThai) {
+      query.trangThai = trangThai;
+    } else {
+      // Mặc định chỉ hiển thị bài đã duyệt
+      query.trangThai = "approved";
+    }
+
+    const posts = await Post.find(query)
+      .populate("danhMuc", "tenDanhMuc")
+      .populate("nguoiDang", "hoTen avatar diemUyTin")
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Post.countDocuments(query);
+
+    res.json({
+      message: "Lấy bài đăng của user thành công",
+      posts,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total,
+      },
+    });
+  } catch (error) {
+    console.error("Get user posts error:", error);
+    res.status(500).json({
+      message: "Lỗi server khi lấy bài đăng của user",
+      error: error.message,
+    });
+  }
+});
+
+// GET /api/users/:id/ratings - Lấy đánh giá của user
+router.get("/:id/ratings", async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const userId = req.params.id;
+
+    const ratings = await Rating.find({ denNguoiDung: userId })
+      .populate("tuNguoiDung", "hoTen avatar")
+      .populate({
+        path: "giaoDich",
+        populate: {
+          path: "baiDang",
+          select: "tieuDe hinhAnh",
+        },
+      })
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Rating.countDocuments({ denNguoiDung: userId });
+
+    res.json({
+      message: "Lấy đánh giá của user thành công",
+      ratings,
+      pagination: {
+        current: parseInt(page),
+        pages: Math.ceil(total / limit),
+        total,
+      },
+    });
+  } catch (error) {
+    console.error("Get user ratings error:", error);
+    res.status(500).json({
+      message: "Lỗi server khi lấy đánh giá của user",
+      error: error.message,
+    });
+  }
+});
+
+// POST /api/users/:id/ratings - Tạo đánh giá cho người bán (không cần transaction)
+router.post("/:id/ratings", authenticateToken, async (req, res) => {
+  try {
+    const { diemDanhGia, nhanXet } = req.body;
+    const sellerId = req.params.id;
+    const buyerId = req.user._id;
+
+    // Validation
+    if (!diemDanhGia || diemDanhGia < 1 || diemDanhGia > 5) {
+      return res.status(400).json({
+        message: "Điểm đánh giá phải từ 1 đến 5",
+        code: "INVALID_RATING",
+      });
+    }
+
+    // Không thể tự đánh giá
+    if (sellerId === buyerId.toString()) {
+      return res.status(400).json({
+        message: "Bạn không thể đánh giá chính mình",
+        code: "SELF_RATING",
+      });
+    }
+
+    // Kiểm tra seller có tồn tại
+    const seller = await User.findById(sellerId);
+    if (!seller) {
+      return res.status(404).json({
+        message: "Không tìm thấy người bán",
+        code: "SELLER_NOT_FOUND",
+      });
+    }
+
+    // Tạo đánh giá mới
+    const rating = new Rating({
+      tuNguoiDung: buyerId,
+      denNguoiDung: sellerId,
+      soSao: diemDanhGia,
+      binhLuan: nhanXet || "",
+      loaiDanhGia: "nguoi-ban",
+      // giaoDich không bắt buộc cho loại đánh giá này
+    });
+
+    await rating.save();
+
+    // Cập nhật điểm uy tín của seller
+    const allRatings = await Rating.find({ denNguoiDung: sellerId });
+    const totalStars = allRatings.reduce((sum, r) => sum + r.soSao, 0);
+    const avgRating = totalStars / allRatings.length;
+
+    seller.diemUyTin = Math.round(avgRating * 10) / 10; // Round to 1 decimal
+    seller.soLuotDanhGia = allRatings.length;
+    await seller.save();
+
+    // Populate rating data
+    await rating.populate("tuNguoiDung", "hoTen avatar");
+
+    res.status(201).json({
+      message: "Đánh giá người bán thành công",
+      rating: {
+        _id: rating._id,
+        tuNguoiDung: rating.tuNguoiDung,
+        diemDanhGia: rating.soSao,
+        nhanXet: rating.binhLuan,
+        ngayDanhGia: rating.createdAt,
+      },
+      seller: {
+        _id: seller._id,
+        hoTen: seller.hoTen,
+        diemUyTin: seller.diemUyTin,
+        soLuotDanhGia: seller.soLuotDanhGia,
+      },
+    });
+  } catch (error) {
+    console.error("Create seller rating error:", error);
+    res.status(500).json({
+      message: "Lỗi server khi tạo đánh giá",
+      error: error.message,
+    });
+  }
+});
+
+// =========================================
+// GENERAL ROUTES AFTER (/:id must be last)
+// =========================================
+
 // GET /api/users/:id - Lấy thông tin user theo ID
 router.get("/:id", async (req, res) => {
   try {
@@ -143,82 +313,83 @@ router.put("/:id", authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/users/:id/posts - Lấy bài đăng của user
-router.get("/:id/posts", async (req, res) => {
+// POST /api/users/:id/ratings - Tạo đánh giá cho người bán (không cần transaction)
+router.post("/:id/ratings", authenticateToken, async (req, res) => {
   try {
-    const { page = 1, limit = 12, trangThai } = req.query;
-    const userId = req.params.id;
+    const { diemDanhGia, nhanXet } = req.body;
+    const sellerId = req.params.id;
+    const buyerId = req.user._id;
 
-    const query = { nguoiDang: userId };
-
-    if (trangThai) {
-      query.trangThai = trangThai;
-    } else {
-      // Mặc định chỉ hiển thị bài đã duyệt
-      query.trangThai = "approved";
+    // Validation
+    if (!diemDanhGia || diemDanhGia < 1 || diemDanhGia > 5) {
+      return res.status(400).json({
+        message: "Điểm đánh giá phải từ 1 đến 5",
+        code: "INVALID_RATING",
+      });
     }
 
-    const posts = await Post.find(query)
-      .populate("danhMuc", "tenDanhMuc")
-      .populate("nguoiDang", "hoTen avatar diemUyTin")
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+    // Không thể tự đánh giá
+    if (sellerId === buyerId.toString()) {
+      return res.status(400).json({
+        message: "Bạn không thể đánh giá chính mình",
+        code: "SELF_RATING",
+      });
+    }
 
-    const total = await Post.countDocuments(query);
+    // Kiểm tra seller có tồn tại
+    const seller = await User.findById(sellerId);
+    if (!seller) {
+      return res.status(404).json({
+        message: "Không tìm thấy người bán",
+        code: "SELLER_NOT_FOUND",
+      });
+    }
 
-    res.json({
-      message: "Lấy bài đăng của user thành công",
-      posts,
-      pagination: {
-        current: parseInt(page),
-        pages: Math.ceil(total / limit),
-        total,
+    // Tạo đánh giá mới
+    const Rating = require("../models/Rating");
+    const rating = new Rating({
+      tuNguoiDung: buyerId,
+      denNguoiDung: sellerId,
+      soSao: diemDanhGia,
+      binhLuan: nhanXet || "",
+      loaiDanhGia: "nguoi-ban",
+      // giaoDich không bắt buộc cho loại đánh giá này
+    });
+
+    await rating.save();
+
+    // Cập nhật điểm uy tín của seller
+    const allRatings = await Rating.find({ denNguoiDung: sellerId });
+    const totalStars = allRatings.reduce((sum, r) => sum + r.soSao, 0);
+    const avgRating = totalStars / allRatings.length;
+
+    seller.diemUyTin = Math.round(avgRating * 10) / 10; // Round to 1 decimal
+    seller.soLuotDanhGia = allRatings.length;
+    await seller.save();
+
+    // Populate rating data
+    await rating.populate("tuNguoiDung", "hoTen avatar");
+
+    res.status(201).json({
+      message: "Đánh giá người bán thành công",
+      rating: {
+        _id: rating._id,
+        tuNguoiDung: rating.tuNguoiDung,
+        diemDanhGia: rating.soSao,
+        nhanXet: rating.binhLuan,
+        ngayDanhGia: rating.createdAt,
+      },
+      seller: {
+        _id: seller._id,
+        hoTen: seller.hoTen,
+        diemUyTin: seller.diemUyTin,
+        soLuotDanhGia: seller.soLuotDanhGia,
       },
     });
   } catch (error) {
-    console.error("Get user posts error:", error);
+    console.error("Create seller rating error:", error);
     res.status(500).json({
-      message: "Lỗi server khi lấy bài đăng của user",
-      error: error.message,
-    });
-  }
-});
-
-// GET /api/users/:id/ratings - Lấy đánh giá của user
-router.get("/:id/ratings", async (req, res) => {
-  try {
-    const { page = 1, limit = 10 } = req.query;
-    const userId = req.params.id;
-
-    const ratings = await Rating.find({ denNguoiDung: userId })
-      .populate("tuNguoiDung", "hoTen avatar")
-      .populate({
-        path: "giaoDich",
-        populate: {
-          path: "baiDang",
-          select: "tieuDe hinhAnh",
-        },
-      })
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-    const total = await Rating.countDocuments({ denNguoiDung: userId });
-
-    res.json({
-      message: "Lấy đánh giá của user thành công",
-      ratings,
-      pagination: {
-        current: parseInt(page),
-        pages: Math.ceil(total / limit),
-        total,
-      },
-    });
-  } catch (error) {
-    console.error("Get user ratings error:", error);
-    res.status(500).json({
-      message: "Lỗi server khi lấy đánh giá của user",
+      message: "Lỗi server khi tạo đánh giá",
       error: error.message,
     });
   }

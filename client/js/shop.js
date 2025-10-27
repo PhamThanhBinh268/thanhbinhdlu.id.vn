@@ -2,8 +2,43 @@
 // Trang Shop - Hiển thị và tìm kiếm sản phẩm đồ cũ
 // =============================================================================
 
+// C2C: Sort posts by service priority (Featured > VIP > Boost > Regular)
+function sortPostsByServicePriority(posts) {
+  if (!Array.isArray(posts)) return posts;
+  
+  return posts.sort((a, b) => {
+    // Priority scoring: Featured = 1000, VIP = 100, Boost = 10, Regular = 0
+    const getScore = (post) => {
+      let score = 0;
+      if (post.tinhNangDichVu) {
+        if (post.tinhNangDichVu.noiBat) score += 1000; // Featured (admin-marked)
+        if (post.tinhNangDichVu.tinVip) score += 100;  // VIP (user-purchased)
+        if (post.tinhNangDichVu.dayTin) score += 10;   // Boosted (user-purchased)
+      }
+      return score;
+    };
+    
+    const scoreA = getScore(a);
+    const scoreB = getScore(b);
+    
+    // Higher score = higher priority (display first)
+    if (scoreA !== scoreB) return scoreB - scoreA;
+    
+    // Same priority: sort by date (newest first)
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   initializeShopPage();
+  // Khi Admin cập nhật sản phẩm (tags/states), tự làm mới danh sách hiện tại
+  let refreshTimer = null;
+  window.addEventListener('post:updated', () => {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => {
+      try { loadPosts(); } catch(_) {}
+    }, 300);
+  });
 });
 
 let currentPage = 1;
@@ -33,6 +68,9 @@ async function initializeShopPage() {
 
   // Update active filters UI
   updateActiveFiltersUI();
+
+  // Init pill toolbar bindings
+  initPillToolbar();
 }
 
 function loadFiltersFromURL() {
@@ -85,17 +123,148 @@ function setupEventListeners() {
   // Clear filters button
   const clearFiltersBtn = document.querySelector("#clearFiltersBtn");
   if (clearFiltersBtn) {
-    clearFiltersBtn.addEventListener("click", clearAllFilters);
+    clearFiltersBtn.addEventListener("click", function(e){ e.preventDefault(); clearAllFilters(); });
   }
 
   // Pagination
   setupPaginationListeners();
 }
 
+function initPillToolbar(){
+  // Giá: panel với 2 range + 2 input + áp dụng/xóa
+  const priceMenu = document.querySelector('#pillPriceMenu');
+  if (priceMenu){
+    const minRange = priceMenu.querySelector('#priceMinRange');
+    const maxRange = priceMenu.querySelector('#priceMaxRange');
+    const minInput = priceMenu.querySelector('#minPriceInput');
+    const maxInput = priceMenu.querySelector('#maxPriceInput');
+    const applyBtn = priceMenu.querySelector('#applyPriceBtn');
+    const clearBtn = priceMenu.querySelector('#clearPriceBtn');
+
+    const MAX = parseInt(maxRange?.max || '5000000000', 10);
+
+    // Helpers
+    const parseMoney = (v)=>{
+      if (!v) return 0;
+      // remove all non-digits
+      const num = String(v).replace(/[^0-9]/g,'');
+      return num ? parseInt(num,10) : 0;
+    };
+    const formatMoney = (n)=> Utils.formatCurrency ? Utils.formatCurrency(n) : n.toLocaleString('vi-VN');
+    const clamp = (v,min,max)=> Math.max(min, Math.min(max, v));
+
+    // init values from currentFilters
+    const startMin = currentFilters.minPrice ? parseInt(currentFilters.minPrice,10) : 0;
+    const startMax = currentFilters.maxPrice ? parseInt(currentFilters.maxPrice,10) : MAX;
+    if (minRange) minRange.value = clamp(startMin, 0, MAX);
+    if (maxRange) maxRange.value = clamp(startMax, 0, MAX);
+    if (minInput) minInput.value = startMin ? formatMoney(startMin) : '';
+    if (maxInput) maxInput.value = startMax && startMax !== MAX ? formatMoney(startMax) : '';
+
+    // keep ranges ordered
+    const syncTrack = ()=>{
+      if (!minRange || !maxRange) return;
+      let a = parseInt(minRange.value,10); let b = parseInt(maxRange.value,10);
+      if (a > b) { const t=a; a=b; b=t; minRange.value=a; maxRange.value=b; }
+      // reflect to inputs if user is using sliders
+      if (minInput) minInput.value = a ? formatMoney(a) : '';
+      if (maxInput) maxInput.value = (b && b !== MAX) ? formatMoney(b) : '';
+      // draw track using CSS vars
+      const p1 = (a/MAX)*100; const p2 = (b/MAX)*100;
+      priceMenu.style.setProperty('--price-p1', p1+"%");
+      priceMenu.style.setProperty('--price-p2', p2+"%");
+    };
+    minRange && minRange.addEventListener('input', syncTrack);
+    maxRange && maxRange.addEventListener('input', syncTrack);
+    syncTrack();
+
+    // inputs -> ranges
+    const syncFromInputs = ()=>{
+      const mi = clamp(parseMoney(minInput?.value||''), 0, MAX);
+      const ma = clamp(parseMoney(maxInput?.value||''), 0, MAX);
+      if (minRange) minRange.value = Math.min(mi, ma || MAX);
+      if (maxRange) maxRange.value = ma || MAX;
+      syncTrack();
+    };
+    minInput && minInput.addEventListener('change', syncFromInputs);
+    maxInput && maxInput.addEventListener('change', syncFromInputs);
+
+    // Apply / Clear
+    applyBtn && applyBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const a = parseInt(minRange?.value||'0',10);
+      const b = parseInt(maxRange?.value||String(MAX),10);
+      currentFilters.minPrice = a ? String(a) : '';
+      currentFilters.maxPrice = (b && b !== MAX) ? String(b) : '';
+      currentPage = 1; updateURL(); loadPosts(); updateActiveFiltersUI();
+      closeParentDropdown(applyBtn);
+    });
+    clearBtn && clearBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      if (minRange) minRange.value = 0;
+      if (maxRange) maxRange.value = MAX;
+      if (minInput) minInput.value='';
+      if (maxInput) maxInput.value='';
+      currentFilters.minPrice=''; currentFilters.maxPrice='';
+      currentPage=1; updateURL(); loadPosts(); updateActiveFiltersUI();
+      closeParentDropdown(clearBtn);
+    });
+  }
+  const conditionMenu = document.querySelector('#pillConditionMenu');
+  if (conditionMenu){
+    conditionMenu.querySelectorAll('a[data-condition]')?.forEach(a=>{
+      a.addEventListener('click', (e)=>{
+        e.preventDefault();
+        currentFilters.condition = a.getAttribute('data-condition') || '';
+        currentPage = 1; updateURL(); loadPosts(); updateActiveFiltersUI();
+      });
+    });
+  }
+  document.querySelectorAll('.pill-area[data-location]')?.forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      currentFilters.location = btn.getAttribute('data-location');
+      currentPage = 1; updateURL(); loadPosts(); updateActiveFiltersUI();
+    });
+  });
+
+  const nearbyBtn = document.getElementById('nearbyBtn');
+  if (nearbyBtn && navigator.geolocation){
+    // đảm bảo không bị disabled/mờ
+    try { nearbyBtn.disabled = false; nearbyBtn.classList.remove('disabled'); } catch(_){}
+    nearbyBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      navigator.geolocation.getCurrentPosition(()=>{
+        // For now, set a generic value to widen search around current area
+        // You can enhance by reverse geocoding later
+        currentFilters.location = 'Gần tôi';
+        currentPage = 1; updateURL(); loadPosts(); updateActiveFiltersUI();
+      }, ()=>{
+        Utils.showToast('Không lấy được vị trí. Vui lòng cho phép truy cập vị trí.', 'warning');
+      });
+    });
+  } else if (nearbyBtn) {
+    // Trình duyệt không hỗ trợ geolocation: vẫn để nút rõ ràng nhưng thông báo
+    try { nearbyBtn.disabled = false; nearbyBtn.classList.remove('disabled'); } catch(_){}
+    nearbyBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      Utils.showToast('Trình duyệt không hỗ trợ xác định vị trí.', 'warning');
+    });
+  }
+}
+
+function closeParentDropdown(el){
+  const dd = el.closest('.dropdown');
+  if (!dd) return;
+  // Bootstrap toggles have 'show' on both toggle and menu
+  dd.querySelector('.dropdown-menu')?.classList.remove('show');
+  dd.querySelector('[data-toggle="dropdown"]')?.classList.remove('show');
+}
+
 async function loadCategories() {
   try {
     const response = await ApiService.get("/categories");
-    const categories = response.data;
+    const categories = response.categories || response.data || response;
 
     const categorySelect = document.querySelector("#categorySelect");
     if (categorySelect) {
@@ -109,6 +278,37 @@ async function loadCategories() {
         }
         categorySelect.appendChild(option);
       });
+    }
+
+    // Populate pill category dropdown
+    const pillMenu = document.getElementById('pillCategoryMenu');
+    const pillText = document.getElementById('pillCategoryText');
+    if (pillMenu){
+      // keep the default 'all'
+      categories.forEach(cat=>{
+        const a = document.createElement('a');
+        a.className = 'dropdown-item';
+        a.href = '#';
+        a.dataset.category = cat._id;
+        a.textContent = cat.tenDanhMuc;
+        a.addEventListener('click', (e)=>{
+          e.preventDefault();
+          currentFilters.category = cat._id;
+          if (pillText) pillText.textContent = cat.tenDanhMuc;
+          currentPage = 1; updateURL(); loadPosts(); updateActiveFiltersUI();
+        });
+        pillMenu.appendChild(a);
+      });
+      // 'all' handler
+      const allLink = pillMenu.querySelector('a[data-category=""]');
+      if (allLink){
+        allLink.addEventListener('click', (e)=>{ e.preventDefault(); currentFilters.category=''; if (pillText) pillText.textContent='Tất cả danh mục'; currentPage=1; updateURL(); loadPosts(); updateActiveFiltersUI(); });
+      }
+      // init text
+      if (pillText && currentFilters.category){
+        const found = categories.find(c=>c._id===currentFilters.category);
+        if (found) pillText.textContent = found.tenDanhMuc;
+      }
     }
 
     // Update sidebar categories
@@ -171,7 +371,7 @@ async function loadPosts() {
     // Build query parameters
     const params = {
       page: currentPage,
-      limit: 12,
+      limit: currentLimit || 12,
       sortBy: currentFilters.sortBy,
     };
 
@@ -181,6 +381,7 @@ async function loadPosts() {
     if (currentFilters.maxPrice) params.maxPrice = currentFilters.maxPrice;
     if (currentFilters.condition) params.condition = currentFilters.condition;
     if (currentFilters.location) params.location = currentFilters.location;
+    if (currentFilters.loaiGia) params.loaiGia = currentFilters.loaiGia;
 
     const response = await ApiService.get("/posts/search", params);
     const {
@@ -193,8 +394,11 @@ async function loadPosts() {
     totalPages = total;
     currentPage = page;
 
+    // C2C: Sort posts by service priority (Featured > VIP > Boost > Regular)
+    const sortedPosts = sortPostsByServicePriority(posts);
+
     // Update posts grid
-    displayPosts(posts);
+    displayPosts(sortedPosts);
 
     // Update pagination
     updatePagination();
@@ -233,10 +437,24 @@ function displayPosts(posts) {
 
   postsContainer.innerHTML = html;
 
-  // Add click listeners for post cards
+  // Add click listeners for post cards (avoid conflicts with inner links)
   postsContainer.querySelectorAll(".product-item").forEach((card) => {
-    card.addEventListener("click", function () {
+    card.addEventListener("click", function (e) {
+      // Check if clicked element is a link or button
+      if (e.target.closest('a') || e.target.closest('button')) {
+        return; // Let the link handle the click
+      }
+      
       const postId = this.getAttribute("data-post-id");
+      
+      if (!postId) {
+        console.error("❌ No post ID found!");
+        return;
+      }
+      
+      // Prevent any default behavior
+      e.preventDefault();
+      e.stopPropagation();
       window.location.href = `detail.html?id=${postId}`;
     });
   });
@@ -248,18 +466,22 @@ function createPostCard(post) {
       ? post.hinhAnh[0]
       : "img/product-placeholder.jpg";
 
-  const price = post.gia > 0 ? Utils.formatCurrency(post.gia) : "Trao đổi";
+  const basePrice = (window.Formatters ? Formatters.getPriceLabel(post.loaiGia, post.gia) : (post.loaiGia === 'cho-mien-phi' ? '<span class="text-success">Miễn phí</span>' : (post.loaiGia === 'trao-doi' ? '<span class="text-primary">Trao đổi</span>' : Utils.formatCurrency(post.gia || 0))));
 
-  const condition = getConditionText(post.tinhTrang);
-  const timeAgo = Utils.formatRelativeTime(post.ngayDang);
+  const condition = (window.Formatters ? Formatters.getConditionText(post.tinhTrang) : getConditionText(post.tinhTrang));
+  const highlightClass = (window.ProductDecorators && ProductDecorators.isHighlighted(post)) ? ' product-highlight' : '';
+  const priceBlock = (window.ProductDecorators ? ProductDecorators.applyPrice(post, basePrice) : `<h5 class=\"text-primary mb-0\">${basePrice}</h5>`);
+  const productBadges = (window.ProductDecorators ? ProductDecorators.renderBadges(post) : '');
+  const when = post.createdAt || post.ngayDang || post.updatedAt;
+  const timeAgo = Utils.formatRelativeTime(when);
 
   return `
         <div class="col-lg-4 col-md-6 col-sm-6 pb-1">
-            <div class="product-item bg-light mb-4 cursor-pointer" data-post-id="${
+            <div class="product-item bg-light mb-4 cursor-pointer${highlightClass}" data-post-id="${
               post._id
             }">
-                <div class="product-img position-relative overflow-hidden">
-                    <img class="img-fluid w-100" src="${imageUrl}" alt="${
+        <div class="product-img position-relative overflow-hidden">
+          <img class="img-fluid w-100" style="height:100%;object-fit:cover;" src="${imageUrl}" alt="${
     post.tieuDe
   }">
                     <div class="product-action">
@@ -273,32 +495,32 @@ function createPostCard(post) {
                         }" onclick="event.stopPropagation()">
                             <i class="fa fa-eye"></i>
                         </a>
-                        <a class="btn btn-outline-dark btn-square" href="#" onclick="startChat('${
+                        ${post.nguoiDang ? `<a class="btn btn-outline-dark btn-square" href="#" onclick="startChat('${
                           post.nguoiDang._id
                         }', event)">
                             <i class="fa fa-comment"></i>
-                        </a>
+                        </a>` : ''}
                     </div>
                 </div>
-                <div class="text-center py-4">
-                    <a class="h6 text-decoration-none text-truncate" href="detail.html?id=${
-                      post._id
-                    }" onclick="event.stopPropagation()">${post.tieuDe}</a>
-                    <div class="d-flex align-items-center justify-content-center mt-2">
-                        <h5 class="text-primary mb-0">${price}</h5>
-                    </div>
+                <div class="text-center py-4 product-info-area" style="cursor: pointer;">
+                    <h6 class="text-decoration-none text-truncate mb-2" style="color: #333;">${post.tieuDe}</h6>
+          <div class="d-flex align-items-center justify-content-center mt-2">
+            ${priceBlock}
+          </div>
                     <div class="d-flex align-items-center justify-content-center mt-1">
-                        <small class="text-muted mr-2">
-                            <i class="fas fa-map-marker-alt"></i> ${post.diaChi}
-                        </small>
+            <small class="text-muted mr-2">
+              <i class="fas fa-map-marker-alt"></i> ${(window.Formatters ? Formatters.getLocation(post) : (post.diaDiem || post.diaChi || ''))}
+            </small>
                         <small class="text-muted">
                             <i class="fas fa-clock"></i> ${timeAgo}
                         </small>
                     </div>
-                    <div class="mt-1">
-                        <span class="badge badge-${getConditionBadgeClass(
-                          post.tinhTrang
-                        )}">${condition}</span>
+          <div class="mt-1">
+            <span class="badge badge-${(window.Formatters ? Formatters.getConditionBadgeClass(post.tinhTrang) : getConditionBadgeClass(post.tinhTrang))}">${condition}</span>
+            ${productBadges ? `<span class="ml-1">${productBadges}</span>` : ''}
+          </div>
+                    <div class="mt-2">
+                        <small class="text-muted">👆 Click để xem chi tiết</small>
                     </div>
                 </div>
             </div>
@@ -308,22 +530,22 @@ function createPostCard(post) {
 
 function getConditionText(condition) {
   const conditionMap = {
-    new: "Mới",
-    "like-new": "Như mới",
-    good: "Tốt",
-    fair: "Khá",
-    poor: "Cần sửa chữa",
+    'moi': "Mới",
+    'nhu-moi': "Như mới",
+    'tot': "Tốt",
+    'kha': "Khá",
+    'can-sua-chua': "Cần sửa chữa",
   };
   return conditionMap[condition] || condition;
 }
 
 function getConditionBadgeClass(condition) {
   const classMap = {
-    new: "success",
-    "like-new": "info",
-    good: "primary",
-    fair: "warning",
-    poor: "danger",
+    'moi': "success",
+    'nhu-moi': "info",
+    'tot': "primary",
+    'kha': "warning",
+    'can-sua-chua': "danger",
   };
   return classMap[condition] || "secondary";
 }
@@ -420,8 +642,9 @@ function updateActiveFiltersUI() {
   }
 
   if (currentFilters.minPrice || currentFilters.maxPrice) {
-    const priceText = `${currentFilters.minPrice || "0"} - ${
-      currentFilters.maxPrice || "∞"
+    const fmt = (n)=> n ? (Utils.formatCurrency ? Utils.formatCurrency(parseInt(n,10)) : Number(n).toLocaleString('vi-VN')) : '';
+    const priceText = `${fmt(currentFilters.minPrice) || "0"} - ${
+      fmt(currentFilters.maxPrice) || "∞"
     }`;
     html += `<span class="badge badge-success mr-2 mb-2">Giá: ${priceText} <i class="fas fa-times ml-1" onclick="removeFilter('price')"></i></span>`;
   }
@@ -541,8 +764,9 @@ function updatePagination() {
 function updateResultsCount(total) {
   const resultsCount = document.querySelector("#resultsCount");
   if (resultsCount) {
-    const start = (currentPage - 1) * 12 + 1;
-    const end = Math.min(currentPage * 12, total);
+    const limit = currentLimit || 12;
+    const start = (currentPage - 1) * limit + 1;
+    const end = Math.min(currentPage * limit, total);
     resultsCount.textContent = `Hiển thị ${start}-${end} trong tổng số ${total} sản phẩm`;
   }
 }
@@ -635,3 +859,300 @@ function startChat(userId, event) {
 window.toggleSavePost = toggleSavePost;
 window.startChat = startChat;
 window.removeFilter = removeFilter;
+
+// =============================================================================
+// Enhanced Filter & Sort System
+// =============================================================================
+
+// State for new filter system
+let currentFilterType = ''; // '', 'ban', 'trao-doi', 'cho-mien-phi'
+let currentSort = 'newest';
+let currentLimit = 12;
+
+// Initialize new filter system
+function initNewFilterSystem() {
+  
+  // Check ALL bg-light p-3 containers
+  const allContainers = document.querySelectorAll('.bg-light.p-3');
+  allContainers.forEach((container, index) => {
+  });
+  
+  // Try more specific selector
+  const filterContainer = document.querySelector('.col-12.pb-1 .bg-light.p-3.rounded');
+  if (filterContainer) {
+  }
+  
+  // NEW BUTTON CHECK
+  const newFilterBtn = document.getElementById('newFilterTypeBtn');
+  
+  // Setup NEW filter button
+  document.querySelectorAll('.filter-option').forEach(item => {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      const filterType = this.getAttribute('data-filter-type');
+      currentFilterType = filterType;
+      
+      const btnText = filterType === '' ? 'Tất cả' : 
+                     filterType === 'ban' ? 'Mua' :
+                     filterType === 'trao-doi' ? 'Trao đổi' : 'Miễn phí';
+      const textSpan = document.getElementById('filterTypeText');
+      if (textSpan) textSpan.textContent = `Lọc: ${btnText}`;
+      
+      updateSortOptions(filterType);
+      applyNewFilters();
+    });
+  });
+  
+  // DEBUG: Check if filterTypeBtn exists as text in HTML
+  
+  // Filter Type Dropdown
+  document.querySelectorAll('[data-filter-type]').forEach(item => {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      const filterType = this.getAttribute('data-filter-type');
+      currentFilterType = filterType;
+      
+      // Update button text
+      const btnText = filterType === '' ? 'Tất cả' : 
+                     filterType === 'ban' ? 'Mua' :
+                     filterType === 'trao-doi' ? 'Trao đổi' : 'Miễn phí';
+      document.getElementById('filterTypeBtn').innerHTML = `<i class="fas fa-filter"></i> Lọc: ${btnText}`;
+      
+      // Update sort options based on filter type
+      updateSortOptions(filterType);
+      
+      // Apply filter
+      applyNewFilters();
+    });
+  });
+  
+  // Sort Dropdown
+  document.querySelectorAll('[data-sort]').forEach(item => {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      const sort = this.getAttribute('data-sort');
+      currentSort = sort;
+      
+      // Update button text
+      const sortText = sort === 'newest' ? 'Mới nhất' :
+                      sort === 'oldest' ? 'Cũ nhất' :
+                      sort === 'price-high' ? 'Giá cao trước' : 'Giá thấp trước';
+      document.getElementById('sortByBtn').textContent = `Sắp xếp: ${sortText}`;
+      
+      // Apply filter
+      applyNewFilters();
+    });
+  });
+  
+  // Limit Dropdown
+  document.querySelectorAll('[data-limit]').forEach(item => {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      const limit = parseInt(this.getAttribute('data-limit'));
+      currentLimit = limit;
+      document.getElementById('limitBtn').textContent = `Hiển thị: ${limit}`;
+      
+      // Apply filter
+      applyNewFilters();
+    });
+  });
+  
+  // Reset Button
+  document.getElementById('resetFiltersBtn')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    resetAllFilters();
+  });
+  
+  // View Toggle Button (single button that toggles between grid and list)
+  const gridViewBtn = document.getElementById('gridViewBtn');
+  const postsContainer = document.getElementById('postsContainer');
+  const viewText = document.getElementById('viewText');
+  
+  // Load saved view mode from localStorage
+  const savedViewMode = localStorage.getItem('shopViewMode') || 'grid';
+  
+  if (gridViewBtn && postsContainer && viewText) {
+    // Apply saved view mode on page load
+    if (savedViewMode === 'list') {
+      postsContainer.classList.add('list-view');
+      viewText.textContent = 'Dạng danh sách';
+      gridViewBtn.querySelector('i').className = 'fas fa-list mr-1';
+    } else {
+      postsContainer.classList.remove('list-view');
+      viewText.textContent = 'Dạng lưới';
+      gridViewBtn.querySelector('i').className = 'fas fa-th mr-1';
+    }
+    
+    // Toggle view on button click
+    gridViewBtn.addEventListener('click', function() {
+      
+      // Toggle between views
+      if (postsContainer.classList.contains('list-view')) {
+        // Currently in list view, switch to grid view
+        postsContainer.classList.remove('list-view');
+        viewText.textContent = 'Dạng lưới';
+        gridViewBtn.querySelector('i').className = 'fas fa-th mr-1';
+        localStorage.setItem('shopViewMode', 'grid');
+      } else {
+        // Currently in grid view, switch to list view
+        postsContainer.classList.add('list-view');
+        viewText.textContent = 'Dạng danh sách';
+        gridViewBtn.querySelector('i').className = 'fas fa-list mr-1';
+        localStorage.setItem('shopViewMode', 'list');
+      }
+    });
+  } else {
+    console.error('View toggle elements not found:', {
+      gridViewBtn,
+      postsContainer,
+      viewText
+    });
+  }
+}
+
+// Update sort options based on filter type
+function updateSortOptions(filterType) {
+  const priceHighOption = document.querySelector('[data-sort="price-high"]');
+  const priceLowOption = document.querySelector('[data-sort="price-low"]');
+  
+  if (filterType === 'ban') {
+    // Show price sort for "Mua"
+    priceHighOption.style.display = 'block';
+    priceLowOption.style.display = 'block';
+  } else {
+    // Hide price sort for other types
+    priceHighOption.style.display = 'none';
+    priceLowOption.style.display = 'none';
+    
+    // Reset to newest if current sort is price
+    if (currentSort === 'price-high' || currentSort === 'price-low') {
+      currentSort = 'newest';
+      document.getElementById('sortByBtn').textContent = 'Sắp xếp: Mới nhất';
+    }
+  }
+}
+
+// Apply new filters
+function applyNewFilters() {
+  // Update currentFilters object
+  if (currentFilterType) {
+    currentFilters.loaiGia = currentFilterType;
+  } else {
+    delete currentFilters.loaiGia;
+  }
+  
+  // Map sort values to API format
+  if (currentSort === 'price-high') {
+    currentFilters.sortBy = 'price_high';
+  } else if (currentSort === 'price-low') {
+    currentFilters.sortBy = 'price_low';
+  } else if (currentSort === 'oldest') {
+    currentFilters.sortBy = 'oldest';
+  } else {
+    currentFilters.sortBy = 'newest';
+  }
+  
+  // Reset to page 1
+  currentPage = 1;
+  
+  // Reload posts
+  loadPosts();
+  
+  // Update URL
+  updateURL();
+}
+
+// Reset all filters
+function resetAllFilters() {
+  // Reset filter type
+  currentFilterType = '';
+  document.getElementById('filterTypeBtn').innerHTML = '<i class="fas fa-filter"></i> Lọc: Tất cả';
+  
+  // Reset sort
+  currentSort = 'newest';
+  document.getElementById('sortByBtn').textContent = 'Sắp xếp: Mới nhất';
+  
+  // Reset limit
+  currentLimit = 12;
+  document.getElementById('limitBtn').textContent = 'Hiển thị: 12';
+  
+  // Hide price sort options
+  updateSortOptions('');
+  
+  // Clear all other filters
+  currentFilters = {
+    search: "",
+    category: "",
+    minPrice: "",
+    maxPrice: "",
+    condition: "",
+    location: "",
+    sortBy: "newest",
+  };
+  
+  // Clear search input
+  const searchInput = document.querySelector("#searchInput");
+  if (searchInput) searchInput.value = "";
+  
+  // Clear price inputs
+  document.getElementById('minPriceInput').value = '';
+  document.getElementById('maxPriceInput').value = '';
+  
+  // Reset price range sliders
+  document.getElementById('priceMinRange').value = 0;
+  document.getElementById('priceMaxRange').value = 5000000000;
+  
+  // Reset page
+  currentPage = 1;
+  
+  // Reload posts
+  loadPosts();
+  
+  // Update URL
+  window.history.pushState({}, '', window.location.pathname);
+  
+  // Update UI
+  updateActiveFiltersUI();
+  
+  Utils.showToast('Đã làm mới bộ lọc', 'info');
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  
+  // Set up MutationObserver to catch when filterTypeBtn is removed
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      mutation.removedNodes.forEach((node) => {
+        if (node.nodeType === 1) { // Element node
+          const hasFilterBtn = node.querySelector && node.querySelector('#filterTypeBtn');
+          if (hasFilterBtn || node.id === 'filterTypeBtn') {
+            console.error('🚨 filterTypeBtn WAS REMOVED!');
+            console.error('🚨 Removed node:', node);
+            console.error('🚨 Stack trace:', new Error().stack);
+          }
+        }
+      });
+    });
+  });
+  
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+  
+  // Check IMMEDIATELY if filterTypeBtn exists
+  
+  // Delay to ensure DOM is fully ready after header injection
+  setTimeout(() => {
+    initNewFilterSystem();
+  }, 100);
+  
+  // Check again after 500ms
+  setTimeout(() => {
+  }, 500);
+  
+  // Check again after 1000ms
+  setTimeout(() => {
+  }, 1000);
+});

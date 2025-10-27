@@ -1,0 +1,58 @@
+[
+  {
+    "code": 79,
+    "name": "Thành phố Hồ Chí Minh",
+    "districts": [
+      { "code": 760, "name": "Quận 1" },
+      { "code": 761, "name": "Quận 12" },
+      { "code": 769, "name": "Quận 7" },
+      { "code": 776, "name": "Quận Bình Thạnh" },
+      { "code": 774, "name": "Quận Tân Bình" },
+      { "code": 777, "name": "Quận Phú Nhuận" },
+      { "code": 783, "name": "Huyện Củ Chi" }
+    ]
+  },
+  {
+    "code": "01",
+    "name": "Thành phố Hà Nội",
+    "districts": [
+  { "code": "001", "name": "Quận Ba Đình" },
+  { "code": "002", "name": "Quận Hoàn Kiếm" },
+  { "code": "003", "name": "Quận Tây Hồ" },
+  { "code": "004", "name": "Quận Long Biên" },
+  { "code": "005", "name": "Quận Cầu Giấy" },
+  { "code": "016", "name": "Huyện Đông Anh" },
+  { "code": "019", "name": "Huyện Gia Lâm" }
+    ]
+  },
+  {
+    "code": 48,
+    "name": "Thành phố Đà Nẵng",
+    "districts": [
+      { "code": 490, "name": "Quận Hải Châu" },
+      { "code": 492, "name": "Quận Sơn Trà" },
+      { "code": 494, "name": "Quận Liên Chiểu" },
+      { "code": 497, "name": "Huyện Hòa Vang" }
+    ]
+  },
+  {
+    "code": 31,
+    "name": "Thành phố Hải Phòng",
+    "districts": [
+      { "code": 303, "name": "Quận Hồng Bàng" },
+      { "code": 304, "name": "Quận Ngô Quyền" },
+      { "code": 305, "name": "Quận Lê Chân" },
+      { "code": 311, "name": "Huyện Thủy Nguyên" }
+    ]
+  },
+  {
+    "code": 92,
+    "name": "Thành phố Cần Thơ",
+    "districts": [
+      { "code": 916, "name": "Quận Ninh Kiều" },
+      { "code": 917, "name": "Quận Ô Môn" },
+      { "code": 918, "name": "Quận Bình Thủy" },
+      { "code": 925, "name": "Huyện Phong Điền" }
+    ]
+  }
+]
