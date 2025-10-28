@@ -1,4 +1,4 @@
-📘 THANH LÝ ĐỒ CŨ
+<img width="456" height="661" alt="image" src="https://github.com/user-attachments/assets/3e8bfda0-04ff-4d12-829c-8537c331cfbb" />📘 THANH LÝ ĐỒ CŨ
 
 Nền tảng mua bán đồ cũ uy tín, an toàn và tiện lợi
 
@@ -134,162 +134,17 @@ Frontend truy cập trực tiếp qua các file HTML trong thư mục /client.
 
 🧱 Cấu Trúc Thư Mục
 ## 📁 Project Structure
-
-
 client
-├── cart.html
-├── checkout.html
-├── contact.html
-├── create-post.html
-├── detail.html
-├── index.html
-├── index.html.bak
-├── login.html
-├── messages.html
-├── my-posts.html
-├── my-transactions.html
-├── profile.html
-├── shop.html
-├── signup.html
-├── transaction-detail.html
-├── vip-packages.html
-│
-├── admin/
-│   ├── dashboard.html
-│   └── posts.html
-│
-├── assets/
-│   └── templates/
-│
-├── LICENSE.txt
-├── READ-ME.txt
-│
-├── css/
-│   └── style.min.css
-│
-├── img/
-│
-├── js/
-│   ├── admin-dashboard.js
-│   ├── admin-posts.js
-│   ├── api.js
-│   ├── checkout.js
-│   ├── create-post.js
-│   ├── decorators.js
-│   ├── detail.js
-│   ├── formatters.js
-│   ├── index.js
-│   ├── layout.js
-│   ├── main.js
-│   ├── messages.js
-│   ├── my-posts.js
-│   ├── my-transactions.js
-│   ├── payment-setup.js
-│   ├── profile.js
-│   ├── shop.js
-│   ├── socket.js
-│   ├── transaction-detail.js
-│   ├── vip-packages.js
-│   └── vn-geo-fallback.json
-│
-├── lib/
-│   ├── animate/
-│   │   └── animate.min.css
-│   │
-│   ├── easing/
-│   │   └── easing.min.js
-│   │
-│   ├── owlcarousel/
-│   │   ├── LICENSE
-│   │   ├── owl.carousel.min.js
-│   │   ├── assets/
-│   │   └── owl.carousel.min.css
-│   │
-│   ├── partials/
-│   │   ├── footer.html
-│   │   └── header.html
-│   │
-│   └── scss/
-│       └── style.scss
-│
-docs
-├── DESIGN_PATTERNS_REPORT.md
-├── PATTERNS.md
-├── SHOPPING_GUIDE.md
-│
-├── api/
-│   └── API.md
-│
-└── development/
-    ├── C2C_CONVERSION.md
-    ├── DEBUG_CREATE_POST.md
-    ├── INTEGRATION_COMPLETE.md
-    ├── MONGODB_INTEGRATION.md
-    └── SELLER_RATING_UPDATE.md
-
+index.html, detail.html, shop.html, create-post.html, login.html, signup.html, profile.html, messages.html, vip-packages.html
+admin/ — dashboard.html, posts.html
+assets/, css/, img/, js/, lib/, partials/, scss/
+docs — tài liệu & hướng dẫn (DESIGN_PATTERNS_REPORT.md, SHOPPING_GUIDE.md, ...)
 server
-├── init_vip_packages.js
-├── INSTALL.md
-├── package.json
-├── test_vip_api.js
-│
-├── scripts/
-│   ├── backfillImageDetail.js
-│   ├── initVipPackages.js
-│   └── seed_mock_data.js
-│
-├── admin/
-│   └── reset_admin_password.js
-│
-├── seed/
-│   ├── seed_data.js
-│   └── seed_full_data.js
-│
-├── src/
-│   ├── index.js
-│   │
-│   ├── middleware/
-│   │   ├── auth.js
-│   │   └── validation.js
-│   │
-│   ├── models/
-│   │   ├── Category.js
-│   │   ├── Message.js
-│   │   ├── Post.js
-│   │   ├── Rating.js
-│   │   ├── SavedPost.js
-│   │   ├── Transaction.js
-│   │   ├── User.js
-│   │   ├── VipPackage.js
-│   │   └── VipSubscription.js
-│   │
-│   ├── routes/
-│   │   ├── auth.js
-│   │   ├── categories.js
-│   │   ├── cloudinary.js
-│   │   ├── messages.js
-│   │   ├── payment-handlers.js
-│   │   ├── post-ratings-addon.js
-│   │   ├── posts.js
-│   │   ├── ratings.js
-│   │   ├── shipping-handlers.js
-│   │   ├── stats.js
-│   │   ├── transactions.js
-│   │   ├── users.js
-│   │   └── vip-packages.js
-│   │
-│   ├── scripts/
-│   │   └── seedData.js
-│   │
-│   ├── socket/
-│   │   └── chatHandler.js
-│   │
-│   └── utils/
-│       ├── cloudinary.js
-│       ├── VipDecorator.js
-│       ├── VipPackageManager.js
-│       └── VipStrategy.js
-
+top-level scripts: init_vip_packages.js, INSTALL.md, package.json, test_vip_api.js
+scripts/ — seed và helpers
+src/
+index.js
+middleware/, models/, routes/, socket/, utils/
 
 🧩 API Chính
 Phân hệ	Endpoint	Method	Mô tả
