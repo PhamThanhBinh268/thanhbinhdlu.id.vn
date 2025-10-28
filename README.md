@@ -1,354 +1,318 @@
-# Thanh Lý Đồ Cũ
+📘 THANH LÝ ĐỒ CŨ
 
-> Nền tảng mua bán đồ cũ uy tín, an toàn và tiện lợi
+Nền tảng mua bán đồ cũ uy tín, an toàn và tiện lợi
 
-## 📖 Giới Thiệu
+🧭 Giới Thiệu
 
-**Thanh Lý Đồ Cũ** là website kết nối người mua và người bán đồ cũ, với hệ thống xác thực và đánh giá uy tín. Website được xây dựng với các công nghệ hiện đại, đảm bảo trải nghiệm người dùng tốt nhất.
+Thanh Lý Đồ Cũ là website kết nối người mua và người bán đồ cũ, với hệ thống xác thực và đánh giá uy tín.
+Mục tiêu là xây dựng một cộng đồng giao dịch văn minh, an toàn và minh bạch.
 
-![Thanh Lý Đồ Cũ Banner](/screenshots/banner.png)
+💡 Mục Tiêu
 
-> Platform kết nối mua bán đồ cũ đáng tin cậy
+🛡️ An toàn cho người mua & người bán
 
-## 💡 Giới Thiệu
+💬 Tương tác trực tiếp qua chat
 
-**Thanh Lý Đồ Cũ** là dự án được tạo ra với mong muốn xây dựng một cộng đồng mua bán đồ cũ văn minh và đáng tin cậy. Chúng tôi hiểu rằng việc mua bán đồ cũ có thể gặp nhiều rủi ro, vì vậy nền tảng của chúng tôi được thiết kế để đảm bảo:
+⭐ Đánh giá uy tín sau mỗi giao dịch
 
-- 🛡️ **An toàn tối đa** cho người mua và người bán
-- � **Tương tác trực tiếp** giữa các bên liên quan
-- ⭐ **Đánh giá uy tín** sau mỗi giao dịch
-- 📢 **Minh bạch thông tin** về sản phẩm
+📢 Minh bạch thông tin sản phẩm
 
-### ✨ Tính Năng Nổi Bật
+✨ Tính Năng Chính
+👨‍💼 Dành cho Người Bán
 
-- **Dành Cho Người Bán**
+Đăng tin với hình ảnh sản phẩm
 
-  - Đăng tin với nhiều hình ảnh chất lượng cao
-  - Quản lý đơn hàng dễ dàng
-  - Chat trực tiếp với người mua
-  - Xây dựng hồ sơ uy tín
+Quản lý bài đăng, chỉnh sửa, xóa
 
-- **Dành Cho Người Mua**
+Chat trực tiếp với người mua
 
-  - Tìm kiếm thông minh theo nhiều tiêu chí
-  - Lọc sản phẩm theo danh mục, giá
-  - Chat và thỏa thuận với người bán
-  - Đánh giá sau khi mua hàng
+Theo dõi đánh giá và độ uy tín
 
-- **Hệ Thống Quản Trị**
-  - Kiểm duyệt nội dung bài đăng
-  - Xử lý báo cáo vi phạm
-  - Thống kê chi tiết
-  - Quản lý người dùng
+🛒 Dành cho Người Mua
 
-### Ảnh chụp màn hình
+Tìm kiếm, lọc sản phẩm theo danh mục & giá
 
-![Trang chủ](/screenshots/home.png)
-_Trang chủ với danh sách sản phẩm mới nhất_
+Chat với người bán, thương lượng giá
 
-![Chi tiết sản phẩm](/screenshots/product.png)
-_Trang chi tiết sản phẩm với thông tin người bán_
+Đánh giá người bán sau giao dịch
 
-![Quản lý Admin](/screenshots/admin.png)
-_Dashboard quản lý dành cho admin_
+⚙️ Hệ thống Quản Trị (Admin)
 
-## 2. Kiến Trúc & Tech Stack
+Kiểm duyệt bài đăng
 
-### Sơ đồ tổng thể
+Quản lý người dùng
 
-## 🛠 Công Nghệ Sử Dụng
+Xử lý báo cáo vi phạm
 
-### Kiến Trúc Tổng Thể
+Xem thống kê toàn hệ thống
 
-```mermaid
+🏗️ Kiến Trúc & Tech Stack
+🔹 Sơ đồ tổng thể
 graph TD
-    Client[Web App] -->|HTTP/SSE| API[API Server]
-    API -->|Query/Write| DB[(MongoDB)]
-    API -->|Upload| CDN[Cloudinary]
-    API -->|Auth| JWT[JWT Service]
+    Client[HTML/CSS/JS - Frontend] -->|HTTP| API[Node.js Express Server]
+    API -->|CRUD| DB[(MongoDB Atlas)]
+    API -->|Auth| JWT[JWT Authentication]
+    API -->|Upload| Cloudinary[Cloudinary Storage]
 
-    subgraph Frontend
-        Client
-        style Client fill:#f9f,stroke:#333,stroke-width:2px
-    end
+🖥️ Frontend
 
-    subgraph Backend Services
-        API
-        DB
-        CDN
-        JWT
-        style API fill:#bbf,stroke:#333,stroke-width:2px
-    end
-```
+HTML5 + CSS3 + JavaScript (ES6)
 
-### 🎨 Frontend
+Bootstrap 5: Giao diện responsive, thân thiện mobile
 
-Chúng tôi sử dụng các công nghệ hiện đại nhất để xây dựng giao diện người dùng:
+Fetch API: Kết nối tới backend
 
-- **React 18**: Tối ưu hiệu năng với Concurrent Mode
-- **TypeScript**: Đảm bảo type-safety, giảm thiểu lỗi
-- **Bootstrap 5**: UI responsive, thân thiện mobile
-- **SCSS**: Styling linh hoạt, dễ bảo trì
-- **Vite**: Build tool siêu nhanh
-- **Context API**: Quản lý state gọn gàng
+Handlebars (tuỳ chọn): Template HTML động
 
-### ⚡ Backend
+⚙️ Backend
 
-Backend được xây dựng với những công nghệ mạnh mẽ:
+Node.js + Express: Xây dựng RESTful API
 
-- **Node.js & Express**: REST API hiệu năng cao
-- **TypeScript**: Type-safe development
-- **MongoDB & Mongoose**: Database linh hoạt
-- **JWT**: Xác thực bảo mật
-- **OpenAPI/Swagger**: API documentation
-- **Jest**: Automated testing
+MongoDB Atlas: Lưu trữ dữ liệu cloud
 
-### 🌟 Điểm Nổi Bật
+Mongoose: ORM kết nối MongoDB
 
-- **Type Safety**: TypeScript giúp phát hiện lỗi sớm
-- **Real-time**: SSE cho thông báo 即時
-- **Scalable**: Kiến trúc module hóa, dễ mở rộng
-- **Mobile-first**: Responsive trên mọi thiết bị
-- **Developer Experience**: Hot reload, debug tools
+JWT: Xác thực bảo mật
 
-## 🚀 Hướng Dẫn Cài Đặt
+Bcrypt: Mã hóa mật khẩu
 
-### 📋 Yêu Cầu Hệ Thống
+Cloudinary: Lưu trữ hình ảnh sản phẩm
 
-Trước khi bắt đầu, hãy đảm bảo máy tính của bạn đã cài đặt:
+Dotenv: Quản lý biến môi trường
 
-- **Node.js**: v16.0.0 trở lên
-- **MongoDB**: v6.0 trở lên
-- **Git**: Bất kỳ phiên bản nào
-- **NPM/Yarn**: Phiên bản mới nhất
+🚀 Hướng Dẫn Cài Đặt
+📋 Yêu Cầu
 
-### 🔧 Các Bước Cài Đặt
+Node.js >= 16
 
-1. **Clone Project**
+Git
 
-```bash
-# Clone repository
-git clone https://github.com/Ji-Eung/cvinh-doanchuyennganh.git
+Tài khoản MongoDB Atlas
 
-# Di chuyển vào thư mục project
-cd cvinh-doanchuyennganh
-```
+Cloudinary account (để lưu ảnh)
 
-2. **Cài Đặt Dependencies**
+🔧 Cài Đặt
 
-```bash
-# Backend dependencies
+1️⃣ Clone project
+
+git clone https://github.com/yourusername/oldmarket-html.git
+cd oldmarket-html
+
+
+2️⃣ Cài đặt dependencies
+
 cd server
 npm install
 
-# Frontend dependencies
-cd ../client
-npm install
-```
 
-3. **Cấu Hình Môi Trường**
+3️⃣ Cấu hình môi trường
 
-```bash
-# Backend environment
-cd server
-cp .env.example .env
-# Mở file .env và cập nhật các biến môi trường
+Tạo file .env trong thư mục server:
 
-# Frontend environment
-cd ../client
-cp .env.example .env
-# Cập nhật VITE_API_URL trong .env
-```
-
-4. **Khởi Tạo Database**
-
-```bash
-# Trong thư mục server
-npm run seed
-# Lệnh này sẽ tạo admin account và dữ liệu mẫu
-```
-
-5. **Chạy Development Server**
-
-```bash
-# Terminal 1 - Backend
-cd server
-npm run dev
-
-# Terminal 2 - Frontend
-cd client
-npm run dev
-```
-
-### 🐳 Chạy với Docker
-
-Nếu bạn quen thuộc với Docker, có thể sử dụng Docker Compose:
-
-```bash
-# Build và chạy các containers
-docker compose up -d
-
-# Kiểm tra logs
-docker logs -f oldmarket-api
-docker logs -f oldmarket-client
-
-# Dừng services
-docker compose down
-```
-
-npm run seed
-npm run dev
-\`\`\`
-
-3. Setup frontend:
-   \`\`\`bash
-   cd client
-   cp .env.example .env
-   npm install
-   npm run dev
-   \`\`\`
-
-### Biến Môi Trường
-
-**Backend (.env):**
-\`\`\`
-MONGODB_URI=mongodb://localhost:27017/oldmarket
-JWT_ACCESS_SECRET=dev_access
-JWT_REFRESH_SECRET=dev_refresh
 PORT=8080
-CORS_ORIGINS=http://localhost:5173
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=admin123
-\`\`\`
+MONGODB_URI="mongodb+srv://<username>:<password>@cluster0.mongodb.net/oldmarket"
+JWT_SECRET=your_secret_key
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 
-**Frontend (.env):**
-\`\`\`
-VITE_API_URL=http://localhost:8080/api
-\`\`\`
 
-### Docker
+4️⃣ Khởi tạo dữ liệu mẫu
 
-\`\`\`bash
-docker compose up -d
-\`\`\`
+npm run seed
 
-### Seeding Data
 
-\`\`\`bash
-cd server
-npm run seed # Tạo categories + admin account
-\`\`\`
+5️⃣ Chạy server
 
-## 4. Demo Access
+npm run dev
 
-### Local Demo Accounts
 
-- **Admin:** admin@example.com / admin123
-- **User:** user@example.com / user123
+Server chạy tại:
+👉 http://localhost:8080
 
-### Links
+Frontend truy cập trực tiếp qua các file HTML trong thư mục /client.
 
-- Frontend: http://localhost:5173
-- API: http://localhost:8080
-- API Docs: http://localhost:8080/openapi.yaml
-- Admin Dashboard: http://localhost:5173/admin
+🧱 Cấu Trúc Thư Mục
+client
+│
+├── cart.html
+├── checkout.html
+├── contact.html
+├── create-post.html
+├── detail.html
+├── index.html
+├── index.html.bak
+├── login.html
+├── messages.html
+├── my-posts.html
+├── my-transactions.html
+├── profile.html
+├── shop.html
+├── signup.html
+├── transaction-detail.html
+├── vip-packages.html
+│
+├── admin/
+│   ├── dashboard.html
+│   └── posts.html
+│
+├── assets/
+│   └── templates/
+│
+├── LICENSE.txt
+├── READ-ME.txt
+│
+├── css/
+│   └── style.min.css
+│
+├── img/
+│
+├── js/
+│   ├── admin-dashboard.js
+│   ├── admin-posts.js
+│   ├── api.js
+│   ├── checkout.js
+│   ├── create-post.js
+│   ├── decorators.js
+│   ├── detail.js
+│   ├── formatters.js
+│   ├── index.js
+│   ├── layout.js
+│   ├── main.js
+│   ├── messages.js
+│   ├── my-posts.js
+│   ├── my-transactions.js
+│   ├── payment-setup.js
+│   ├── profile.js
+│   ├── shop.js
+│   ├── socket.js
+│   ├── transaction-detail.js
+│   ├── vip-packages.js
+│   └── vn-geo-fallback.json
+│
+├── lib/
+│   ├── animate/
+│   │   └── animate.min.css
+│   │
+│   ├── easing/
+│   │   └── easing.min.js
+│   │
+│   ├── owlcarousel/
+│   │   ├── LICENSE
+│   │   ├── owl.carousel.min.js
+│   │   ├── assets/
+│   │   └── owl.carousel.min.css
+│   │
+│   ├── partials/
+│   │   ├── footer.html
+│   │   └── header.html
+│   │
+│   └── scss/
+│       └── style.scss
+│
+docs
+│
+├── DESIGN_PATTERNS_REPORT.md
+├── PATTERNS.md
+├── SHOPPING_GUIDE.md
+│
+├── api/
+│   └── API.md
+│
+└── development/
+    ├── C2C_CONVERSION.md
+    ├── DEBUG_CREATE_POST.md
+    ├── INTEGRATION_COMPLETE.md
+    ├── MONGODB_INTEGRATION.md
+    └── SELLER_RATING_UPDATE.md
 
-## 5. Cấu Trúc Project
+server
+│
+├── init_vip_packages.js
+├── INSTALL.md
+├── package.json
+├── test_vip_api.js
+│
+├── scripts/
+│   ├── backfillImageDetail.js
+│   ├── initVipPackages.js
+│   └── seed_mock_data.js
+│
+├── admin/
+│   └── reset_admin_password.js
+│
+├── seed/
+│   ├── seed_data.js
+│   └── seed_full_data.js
+│
+├── src/
+│   ├── index.js
+│   │
+│   ├── middleware/
+│   │   ├── auth.js
+│   │   └── validation.js
+│   │
+│   ├── models/
+│   │   ├── Category.js
+│   │   ├── Message.js
+│   │   ├── Post.js
+│   │   ├── Rating.js
+│   │   ├── SavedPost.js
+│   │   ├── Transaction.js
+│   │   ├── User.js
+│   │   ├── VipPackage.js
+│   │   └── VipSubscription.js
+│   │
+│   ├── routes/
+│   │   ├── auth.js
+│   │   ├── categories.js
+│   │   ├── cloudinary.js
+│   │   ├── messages.js
+│   │   ├── payment-handlers.js
+│   │   ├── post-ratings-addon.js
+│   │   ├── posts.js
+│   │   ├── ratings.js
+│   │   ├── shipping-handlers.js
+│   │   ├── stats.js
+│   │   ├── transactions.js
+│   │   ├── users.js
+│   │   └── vip-packages.js
+│   │
+│   ├── scripts/
+│   │   └── seedData.js
+│   │
+│   ├── socket/
+│   │   └── chatHandler.js
+│   │
+│   └── utils/
+│       ├── cloudinary.js
+│       ├── VipDecorator.js
+│       ├── VipPackageManager.js
+│       └── VipStrategy.js
 
-\`\`\`
-├── client/ # Frontend React app
-│ ├── src/
-│ │ ├── components/ # React components
-│ │ ├── pages/ # Page components  
-│ │ ├── api/ # API client
-│ │ └── utils/ # Helper functions
-│ └── public/ # Static assets
-├── server/ # Backend Express app
-│ ├── src/
-│ │ ├── config/ # App configuration
-│ │ ├── models/ # MongoDB models
-│ │ ├── routes/ # API routes
-│ │ ├── middleware/ # Express middleware
-│ │ └── utils/ # Helper functions
-│ └── tests/ # Test suites
-├── docs/ # Documentation
-└── docker-compose.yml # Docker compose config
-\`\`\`
 
-### Coding Style
+🧩 API Chính
+Phân hệ	Endpoint	Method	Mô tả
+Auth	/api/auth/register	POST	Đăng ký tài khoản
+Auth	/api/auth/login	POST	Đăng nhập
+Users	/api/users/:id	GET	Lấy thông tin người dùng
+Posts	/api/posts	GET	Lấy danh sách bài đăng
+Posts	/api/posts	POST	Tạo bài đăng mới
+Chat	/api/chat/:id	GET	Lấy tin nhắn
+Ratings	/api/ratings	POST	Gửi đánh giá
+Admin	/api/admin/posts/:id/approve	PATCH	Duyệt bài đăng
+🧪 Tài Khoản Demo
+Role	Email	Password
+Admin	admin@example.com
+	admin123
+User	user@example.com
+	user123
+🌍 Demo Đường Dẫn
+Thành phần	URL
+Trang chủ	http://localhost:8080/client/index.html
 
-- ESLint + Prettier config
-- Airbnb JavaScript Style Guide
-- Conventional Commits
+API Server	http://localhost:8080/api
 
-### Git Workflow
+API Docs	http://localhost:8080/api-docs
 
-- Branch naming: feature/_, bugfix/_, hotfix/\*
-- PR template với checklist
-- Squash & merge vào main
-
-## 6. Use Cases Demo
-
-### User Flow
-
-1. Đăng ký tài khoản mới
-
-   - UI: /signup
-   - API: POST /api/auth/register
-
-2. Đăng bài bán
-
-   - UI: /posts/new
-   - API: POST /api/posts
-
-3. Chat với người bán
-
-   - UI: /chat/:userId
-   - API: GET /api/chat/with/:userId
-
-4. Đánh giá sau giao dịch
-   - UI: /transactions/:id
-   - API: POST /api/ratings
-
-### Admin Flow
-
-1. Duyệt bài đăng
-
-   - UI: /admin/posts
-   - API: PATCH /api/admin/posts/:id/approve
-
-2. Xem báo cáo vi phạm
-   - UI: /admin/reports
-   - API: GET /api/admin/reports
-
-## API Documentation
-
-- OpenAPI Spec: [openapi.yaml](/openapi.yaml)
-- Swagger UI: http://localhost:8080/api-docs
-
-## Database Schema
-
-### ERD
-
-![Database ERD](/docs/erd.png)
-
-### Main Collections
-
-- users
-- posts
-- transactions
-- messages
-- ratings
-- reports
-- categories
-
-### Migration Scripts
-
-\`\`\`bash
-cd server/scripts
-node migrate-db.js # Run migrations
-\`\`\`
-
-## License
-
-Academic / Educational use only. See [LICENSE](LICENSE) file.
+Admin Dashboard	http://localhost:8080/client/admin.html
