@@ -1,4 +1,4 @@
-<img width="456" height="661" alt="image" src="https://github.com/user-attachments/assets/3e8bfda0-04ff-4d12-829c-8537c331cfbb" />📘 THANH LÝ ĐỒ CŨ
+📘 THANH LÝ ĐỒ CŨ
 
 Nền tảng mua bán đồ cũ uy tín, an toàn và tiện lợi
 
@@ -145,7 +145,7 @@ scripts/ — seed và helpers
 src/
 index.js
 middleware/, models/, routes/, socket/, utils/
-
+<img width="456" height="661" alt="image" src="https://github.com/user-attachments/assets/3e8bfda0-04ff-4d12-829c-8537c331cfbb" />
 🧩 API Chính
 Phân hệ	Endpoint	Method	Mô tả
 Auth	/api/auth/register	POST	Đăng ký tài khoản
