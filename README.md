@@ -133,8 +133,10 @@ Server chạy tại:
 Frontend truy cập trực tiếp qua các file HTML trong thư mục /client.
 
 🧱 Cấu Trúc Thư Mục
+## 📁 Project Structure
+
+
 client
-│
 ├── cart.html
 ├── checkout.html
 ├── contact.html
@@ -211,7 +213,6 @@ client
 │       └── style.scss
 │
 docs
-│
 ├── DESIGN_PATTERNS_REPORT.md
 ├── PATTERNS.md
 ├── SHOPPING_GUIDE.md
@@ -227,7 +228,6 @@ docs
     └── SELLER_RATING_UPDATE.md
 
 server
-│
 ├── init_vip_packages.js
 ├── INSTALL.md
 ├── package.json
