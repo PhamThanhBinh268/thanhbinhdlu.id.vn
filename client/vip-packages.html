@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <title>Gói VIP - Nâng Cấp Tài Khoản | Thanh Lý</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="Gói VIP, Nâng cấp tài khoản, Premium" name="keywords" />
+    <meta
+      content="Nâng cấp tài khoản VIP để có nhiều ưu đãi hơn"
+      name="description"
+    />
+
+    <!-- Favicon -->
+    <link href="img/favicon.ico" rel="icon" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Font Awesome -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- Libraries Stylesheet -->
+    <link href="lib/animate/animate.min.css" rel="stylesheet" />
+    <link href="lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet" />
+
+    <!-- Customized Bootstrap Stylesheet -->
+    <link href="css/style.min.css" rel="stylesheet" />
+
+    <!-- SweetAlert2 -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css"
+    />
+
+    <style>
+      .vip-packages-container {
+        padding: 60px 0;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: calc(100vh - 200px);
+      }
+
+      .vip-header {
+        text-align: center;
+        margin-bottom: 50px;
+        animation: fadeInDown 0.8s;
+      }
+
+      .vip-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 15px;
+      }
+
+      .vip-header p {
+        font-size: 1.1rem;
+        color: #7f8c8d;
+      }
+
+      .vip-card {
+        background: white;
+        border-radius: 20px;
+        padding: 40px 30px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+        animation: fadeInUp 0.8s;
+      }
+
+      .vip-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
+      }
+
+      .vip-card.best-seller::before {
+        content: "PHỔ BIẾN";
+        position: absolute;
+        top: 20px;
+        right: -35px;
+        background: #ff6b6b;
+        color: white;
+        padding: 5px 40px;
+        transform: rotate(45deg);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+      }
+
+      .vip-card.professional {
+        border: 3px solid #3498db;
+        transform: scale(1.05);
+      }
+
+      .vip-card.professional:hover {
+        transform: scale(1.05) translateY(-10px);
+      }
+
+      .vip-name {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin-bottom: 15px;
+        color: #2c3e50;
+      }
+
+      .vip-card.basic .vip-name {
+        color: #95a5a6;
+      }
+
+      .vip-card.professional .vip-name {
+        color: #3498db;
+      }
+
+      .vip-card.vip .vip-name {
+        background: linear-gradient(45deg, #f39c12, #e74c3c);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .vip-price {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 10px;
+      }
+
+      .vip-price small {
+        font-size: 1rem;
+        color: #95a5a6;
+        font-weight: 400;
+      }
+
+      .vip-duration {
+        font-size: 0.9rem;
+        color: #7f8c8d;
+        margin-bottom: 25px;
+      }
+
+      .vip-features {
+        list-style: none;
+        padding: 0;
+        margin-bottom: 30px;
+      }
+
+      .vip-features li {
+        padding: 12px 0;
+        border-bottom: 1px solid #ecf0f1;
+        color: #34495e;
+        display: flex;
+        align-items: center;
+      }
+
+      .vip-features li:last-child {
+        border-bottom: none;
+      }
+
+      .vip-features li i {
+        color: #27ae60;
+        margin-right: 10px;
+        font-size: 1.1rem;
+      }
+
+      .vip-subscribe-btn {
+        width: 100%;
+        padding: 15px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        border-radius: 50px;
+        border: none;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .vip-card.basic .vip-subscribe-btn {
+        background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+        color: white;
+      }
+
+      .vip-card.professional .vip-subscribe-btn {
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        color: white;
+      }
+
+      .vip-card.vip .vip-subscribe-btn {
+        background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);
+        color: white;
+      }
+
+      .vip-subscribe-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      }
+
+      .my-subscription-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 40px;
+        color: white;
+        margin-bottom: 50px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        animation: fadeIn 0.8s;
+      }
+
+      .subscription-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+
+      .subscription-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 10px 25px;
+        border-radius: 50px;
+        font-size: 1.2rem;
+        font-weight: 700;
+        display: inline-block;
+      }
+
+      .subscription-stats {
+        display: flex;
+        gap: 40px;
+        flex-wrap: wrap;
+      }
+
+      .stat-item {
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        display: block;
+      }
+
+      .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+      }
+
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .payment-modal .modal-content {
+        border-radius: 20px;
+        border: none;
+      }
+
+      .payment-method {
+        border: 2px solid #ecf0f1;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .payment-method:hover {
+        border-color: #3498db;
+        background: #f8f9fa;
+      }
+
+      .payment-method.selected {
+        border-color: #3498db;
+        background: #e3f2fd;
+      }
+
+      .payment-method i {
+        font-size: 2rem;
+        margin-right: 15px;
+        color: #3498db;
+      }
+
+      .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+      }
+
+      .loading-spinner {
+        width: 60px;
+        height: 60px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .vip-card.professional {
+          transform: scale(1);
+        }
+
+        .vip-card.professional:hover {
+          transform: translateY(-10px);
+        }
+
+        .vip-header h1 {
+          font-size: 2rem;
+        }
+
+        .subscription-stats {
+          gap: 20px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Header -->
+    <div class="container-fluid" id="topbarNav"></div>
+
+    <!-- VIP Packages Section -->
+    <div class="vip-packages-container">
+      <div class="container">
+        <!-- My Current Subscription (if any) -->
+        <div id="mySubscriptionSection" style="display: none"></div>
+
+        <!-- VIP Header -->
+        <div class="vip-header">
+          <h1>
+            <i class="fas fa-crown text-warning"></i> Nâng Cấp Tài Khoản VIP
+          </h1>
+          <p>Chọn gói VIP phù hợp để tận hưởng nhiều ưu đãi hơn</p>
+        </div>
+
+        <!-- VIP Packages Cards -->
+        <div class="row" id="vipPackagesContainer">
+          <!-- Loading state -->
+          <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="sr-only">Đang tải...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div
+      class="modal fade payment-modal"
+      id="paymentModal"
+      tabindex="-1"
+      role="dialog"
+    >
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header border-0">
+            <h5 class="modal-title">
+              <i class="fas fa-credit-card text-primary"></i> Chọn Phương Thức
+              Thanh Toán
+            </h5>
+            <button
+              type="button"
+              class="close"
+              data-dismiss="modal"
+              aria-label="Close"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div id="selectedPackageInfo" class="alert alert-info mb-4"></div>
+
+            <div class="payment-methods">
+              <div class="payment-method" data-method="momo">
+                <i class="fas fa-mobile-alt"></i>
+                <div class="d-inline-block">
+                  <strong>Ví MoMo</strong>
+                  <p class="mb-0 text-muted small">Thanh toán qua ví điện tử</p>
+                </div>
+              </div>
+
+              <div class="payment-method" data-method="zalopay">
+                <i class="fas fa-wallet"></i>
+                <div class="d-inline-block">
+                  <strong>ZaloPay</strong>
+                  <p class="mb-0 text-muted small">Thanh toán qua ZaloPay</p>
+                </div>
+              </div>
+
+              <div class="payment-method" data-method="banking">
+                <i class="fas fa-university"></i>
+                <div class="d-inline-block">
+                  <strong>Chuyển Khoản Ngân Hàng</strong>
+                  <p class="mb-0 text-muted small">Chuyển khoản trực tiếp</p>
+                </div>
+              </div>
+
+              <div class="payment-method" data-method="cash">
+                <i class="fas fa-money-bill-wave"></i>
+                <div class="d-inline-block">
+                  <strong>Tiền Mặt</strong>
+                  <p class="mb-0 text-muted small">Thanh toán trực tiếp</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer border-0">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">
+              Hủy
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              id="confirmPaymentBtn"
+              disabled
+            >
+              Xác Nhận Thanh Toán
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div id="footerSection"></div>
+
+    <!-- Back to Top -->
+    <a href="#" class="btn btn-primary back-to-top"
+      ><i class="fa fa-angle-double-up"></i
+    ></a>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
+    <script src="lib/easing/easing.min.js"></script>
+    <script src="lib/owlcarousel/owl.carousel.min.js"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Custom JS -->
+    <script src="js/api.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/vip-packages.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

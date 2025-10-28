@@ -1,0 +1,194 @@
+<!-- Shared Header/Nav Partial -->
+<div class="container-fluid">
+  <div class="row bg-secondary py-1 px-xl-5">
+    <div class="col-lg-6 d-none d-lg-block">
+      <div class="d-inline-flex align-items-center h-100 small">
+  <a class="text-body mr-3" href="#">Giới Thiệu</a>
+  <a class="text-body mr-3" href="/contact.html">Liên Hệ</a>
+        <a class="text-body mr-3" href="#">Hỗ Trợ</a>
+        <a class="text-body mr-3" href="#">FAQ</a>
+      </div>
+    </div>
+    <div class="col-lg-6 text-center text-lg-right">
+      <div class="d-inline-flex align-items-center" id="authButtons"></div>
+      <div class="d-inline-flex align-items-center d-block d-lg-none">
+        <a href="/cart.html" class="btn px-0 ml-2 position-relative" aria-label="Giỏ hàng">
+          <i class="fas fa-shopping-cart text-dark"></i>
+          <span class="badge badge-warning cart-badge" style="display:none; position:absolute; top:-6px; right:-10px;">0</span>
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="row align-items-center bg-light py-3 px-xl-5 d-none d-lg-flex">
+    <div class="col-lg-2">
+  <a href="/index.html" class="text-decoration-none">
+        <span class="h1 text-uppercase text-primary bg-dark px-2">Thanh</span>
+        <span class="h1 text-uppercase text-dark bg-primary px-2 ml-n1"
+          >Lý</span
+        >
+      </a>
+    </div>
+  <div class="col-lg-7 col-12">
+  <form id="globalSearchForm" action="#" class="mx-auto" style="max-width: 95%;">
+        <div class="input-group search-bar rounded-pill border">
+          <div class="input-group-prepend d-none d-md-flex">
+            <select id="searchCategorySelect" class="custom-select border-0 rounded-pill-left">
+              <option value="">Tất cả danh mục</option>
+            </select>
+          </div>
+          <div class="search-divider d-none d-md-block" aria-hidden="true"></div>
+          <input
+            type="text"
+            id="globalSearchInput"
+            class="form-control border-0"
+            placeholder="Tìm kiếm sản phẩm"
+          />
+          <div class="search-divider d-none d-md-block" aria-hidden="true"></div>
+          <div class="input-group-append d-none d-md-flex">
+            <select id="searchProvinceSelect" class="custom-select border-0">
+              <option value="all">Toàn quốc</option>
+            </select>
+            <div class="search-divider d-none d-md-block" aria-hidden="true"></div>
+            <select id="searchDistrictSelect" class="custom-select border-0" disabled>
+              <option value="">Quận/Huyện</option>
+            </select>
+          </div>
+          <div class="input-group-append">
+            <button class="btn btn-primary rounded-pill-right" type="submit" aria-label="Tìm kiếm">
+              <i class="fa fa-search"></i>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="col-lg-3 d-none d-lg-flex justify-content-end">
+      <div class="d-flex align-items-center justify-content-end flex-nowrap w-100">
+        <div class="header-actions navbar-nav py-0 flex-row align-items-center flex-nowrap" id="mainNav">
+          <a href="/index.html" data-link-id="home" class="nav-item nav-link d-none">Trang Chủ</a>
+          <a href="/shop.html" data-link-id="shop" class="nav-item nav-link d-none">Sản Phẩm</a>
+          <a href="/create-post.html" data-link-id="create" class="nav-item nav-link btn btn-outline-dark rounded-pill px-3 py-1 ml-2">Đăng Tin</a>
+          <a href="/vip-packages.html" data-link-id="vip" class="nav-item nav-link ml-2" title="Gói VIP">
+            <i class="fas fa-crown text-warning"></i>
+          </a>
+          <a href="/services.html" data-link-id="services" class="nav-item nav-link ml-2 d-none" title="Gói Dịch Vụ">
+            <i class="fas fa-box text-primary"></i>
+          </a>
+          <a href="/my-transactions.html" data-link-id="transactions" class="nav-item nav-link ml-2 position-relative" title="Đề Nghị">
+            <i class="fas fa-exchange-alt text-success"></i>
+            <span class="badge badge-danger" id="proposalBadge" style="display:none; position:absolute; top:-6px; right:-10px;">0</span>
+          </a>
+          <a href="/messages.html" data-link-id="messages" class="nav-item nav-link ml-3 position-relative messages-link" aria-label="Tin nhắn">
+            <i class="fas fa-comments"></i>
+            <span class="badge badge-danger messages-badge" style="display:none; position:absolute; top:-6px; right:-10px;">0</span>
+          </a>
+          <a href="/profile.html" data-link-id="profile" class="nav-item nav-link d-none">Hồ Sơ</a>
+          <!-- Liên hệ đã đưa vào dropdown user -->
+        </div>
+        <div id="topUserArea" class="d-inline-block ml-3"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Navbar Start -->
+<div class="container-fluid bg-dark mb-30 d-none">
+  <div class="row px-xl-5">
+    <!-- Hidden vertical category dropdown -->
+    <!-- (Removed per request) -->
+    <div class="d-none"></div>
+    <div class="col-lg-12">
+      <nav
+        class="navbar navbar-expand-lg bg-dark navbar-dark py-3 py-lg-0 px-0"
+      >
+  <a href="/index.html" class="text-decoration-none d-block d-lg-none">
+          <span class="h1 text-uppercase text-dark bg-light px-2">Thanh</span>
+          <span class="h1 text-uppercase text-light bg-primary px-2 ml-n1"
+            >Lý</span
+          >
+        </a>
+        <button
+          type="button"
+          class="navbar-toggler"
+          data-toggle="collapse"
+          data-target="#navbarCollapse"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div
+          class="collapse navbar-collapse justify-content-between"
+          id="navbarCollapse"
+        >
+          <div class="navbar-nav mr-auto py-0" id="mainNavHidden">
+            <a href="/index.html" data-link-id="home" class="nav-item nav-link"
+              >Trang Chủ</a
+            >
+            <a href="/shop.html" data-link-id="shop" class="nav-item nav-link"
+              >Sản Phẩm</a
+            >
+            <a
+              href="/detail.html"
+              data-link-id="detail"
+              class="nav-item nav-link d-none"
+              >Chi Tiết</a
+            >
+            <a
+              href="/create-post.html"
+              data-link-id="create"
+              class="nav-item nav-link"
+              >Đăng Tin</a
+            >
+            <a
+              href="/vip-packages.html"
+              data-link-id="vip"
+              class="nav-item nav-link"
+              ><i class="fas fa-crown text-warning"></i> Gói VIP</a
+            >
+            <a
+              href="/services.html"
+              data-link-id="services"
+              class="nav-item nav-link d-none"
+              ><i class="fas fa-box"></i> Gói Dịch Vụ</a
+            >
+            <a
+              href="/my-transactions.html"
+              data-link-id="transactions"
+              class="nav-item nav-link"
+              ><i class="fas fa-exchange-alt"></i> Đề Nghị</a
+            >
+            <a
+              href="/checkout.html"
+              data-link-id="checkout"
+              class="nav-item nav-link d-none"
+              >Thanh Toán</a
+            >
+            <a
+              href="/messages.html"
+              data-link-id="messages"
+              class="nav-item nav-link"
+              >Tin Nhắn</a
+            >
+            <span class="badge badge-danger messages-badge" style="display:none;margin-left:6px;">0</span>
+            <a
+              href="/profile.html"
+              data-link-id="profile"
+              class="nav-item nav-link"
+              >Hồ Sơ</a
+            >
+            <a
+              href="/contact.html"
+              data-link-id="contact"
+              class="nav-item nav-link"
+              >Liên Hệ</a
+            >
+          </div>
+          <div
+            class="navbar-nav ml-auto py-0 d-none d-lg-flex align-items-center"
+            id="navUserArea"
+          >
+            <!-- Filled dynamically by layout.js (avatar, dropdown, etc.) -->
+          </div>
+        </div>
+      </nav>
+    </div>
+  </div>
+</div>
+<!-- Navbar End -->

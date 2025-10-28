@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <title>Quản trị - Dashboard</title>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <link href="../css/style.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet" />
+  <style>
+    .kpi-card{display:flex;align-items:center;gap:12px;padding:16px;border:1px solid #eee;border-radius:8px;background:#fff}
+    .kpi-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#f5f5f5}
+    .kpi-title{font-size:12px;color:#777;margin:0}
+    .kpi-value{font-size:20px;font-weight:700;margin:0}
+  </style>
+</head>
+<body>
+  <div id="app-header"></div>
+  <div class="container-fluid px-xl-5 py-3">
+    <h3 class="mb-3">Tổng quan hệ thống</h3>
+
+    <div class="row" id="kpiRow">
+      <div class="col-md-4 mb-3">
+        <div class="kpi-card">
+          <div class="kpi-icon"><i class="fas fa-file-alt"></i></div>
+          <div>
+            <p class="kpi-title">Tổng bài đăng</p>
+            <p class="kpi-value" id="kpiPosts">-</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-3">
+        <div class="kpi-card">
+          <div class="kpi-icon"><i class="fas fa-users"></i></div>
+          <div>
+            <p class="kpi-title">Tổng người dùng</p>
+            <p class="kpi-value" id="kpiUsers">-</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-3">
+        <div class="kpi-card">
+          <div class="kpi-icon"><i class="fas fa-exchange-alt"></i></div>
+          <div>
+            <p class="kpi-title">Tổng giao dịch</p>
+            <p class="kpi-value" id="kpiTransactions">-</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- Quick Links C2C Features -->
+      <div class="col-12 mb-3">
+        <div class="card">
+          <div class="card-header"><strong>Quản Lý C2C Marketplace</strong></div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-3 mb-2">
+                <a href="posts.html" class="btn btn-block btn-outline-primary">
+                  <i class="fas fa-file-alt"></i> Bài Đăng
+                </a>
+              </div>
+              <div class="col-md-3 mb-2">
+                <a href="vouchers.html" class="btn btn-block btn-outline-success">
+                  <i class="fas fa-ticket-alt"></i> Vouchers
+                </a>
+              </div>
+              <div class="col-md-3 mb-2">
+                <a href="services.html" class="btn btn-block btn-outline-info">
+                  <i class="fas fa-box"></i> Gói Dịch Vụ
+                </a>
+              </div>
+              <div class="col-md-3 mb-2">
+                <a href="../index.html" class="btn btn-block btn-outline-secondary">
+                  <i class="fas fa-home"></i> Về Trang Chủ
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-lg-6 mb-3">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Bài đăng gần đây</strong>
+            <a href="posts.html" class="btn btn-sm btn-primary">Quản lý bài đăng</a>
+          </div>
+          <div class="card-body p-0">
+            <table class="table table-striped mb-0" id="recentPostsTable">
+              <thead><tr><th>Tiêu đề</th><th>Trạng thái</th><th>Ngày</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6 mb-3">
+        <div class="card">
+          <div class="card-header"><strong>Người dùng mới</strong></div>
+          <div class="card-body p-0">
+            <table class="table table-striped mb-0" id="recentUsersTable">
+              <thead><tr><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Ngày</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="app-footer"></div>
+
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/layout.js"></script>
+  <script src="../js/admin-dashboard.js"></script>
+</body>
+</html>
