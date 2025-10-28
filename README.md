@@ -134,18 +134,9 @@ Frontend truy cập trực tiếp qua các file HTML trong thư mục /client.
 
 🧱 Cấu Trúc Thư Mục
 ## 📁 Project Structure
-client
-index.html, detail.html, shop.html, create-post.html, login.html, signup.html, profile.html, messages.html, vip-packages.html
-admin/ — dashboard.html, posts.html
-assets/, css/, img/, js/, lib/, partials/, scss/
-docs — tài liệu & hướng dẫn (DESIGN_PATTERNS_REPORT.md, SHOPPING_GUIDE.md, ...)
-server
-top-level scripts: init_vip_packages.js, INSTALL.md, package.json, test_vip_api.js
-scripts/ — seed và helpers
-src/
-index.js
-middleware/, models/, routes/, socket/, utils/
 <img width="456" height="661" alt="image" src="https://github.com/user-attachments/assets/3e8bfda0-04ff-4d12-829c-8537c331cfbb" />
+
+
 🧩 API Chính
 Phân hệ	Endpoint	Method	Mô tả
 Auth	/api/auth/register	POST	Đăng ký tài khoản
